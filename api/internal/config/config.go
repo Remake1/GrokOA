@@ -17,7 +17,8 @@ const (
 )
 
 type Config struct {
-	HTTP HTTP `yaml:"http"`
+	HTTP    HTTP    `yaml:"http"`
+	Logging Logging `yaml:"logging"`
 }
 
 type HTTP struct {
@@ -27,6 +28,13 @@ type HTTP struct {
 	WriteTimeout    time.Duration `yaml:"write_timeout" env:"HTTP_WRITE_TIMEOUT" env-default:"10s"`
 	IdleTimeout     time.Duration `yaml:"idle_timeout" env:"HTTP_IDLE_TIMEOUT" env-default:"60s"`
 	ShutdownTimeout time.Duration `yaml:"shutdown_timeout" env:"HTTP_SHUTDOWN_TIMEOUT" env-default:"10s"`
+}
+
+type Logging struct {
+	Level           string `yaml:"level" env:"LOG_LEVEL" env-default:"info"`
+	Format          string `yaml:"format" env:"LOG_FORMAT" env-default:"console"`
+	TimeFieldFormat string `yaml:"time_field_format" env:"LOG_TIME_FIELD_FORMAT" env-default:"2006-01-02T15:04:05Z07:00"`
+	IncludeCaller   bool   `yaml:"include_caller" env:"LOG_INCLUDE_CALLER" env-default:"false"`
 }
 
 func (h HTTP) Address() string {

@@ -5,3 +5,9 @@ http:
   write_timeout: "10s"
   idle_timeout: "60s"
   shutdown_timeout: "10s"
+
+logging:
+  level: "info"
+  format: "console"
+  time_field_format: "2006-01-02T15:04:05Z07:00"
+  include_caller: false

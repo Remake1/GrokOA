@@ -14,6 +14,7 @@ import (
 	healthrepository "api/internal/repository/health"
 	healthservice "api/internal/service/health"
 	"api/pkg/httpserver"
+	applogger "api/pkg/logger"
 )
 
 func main() {
@@ -22,10 +23,20 @@ func main() {
 		log.Fatalf("load config: %v", err)
 	}
 
+	logger, err := applogger.New(applogger.Config{
+		Level:           cfg.Logging.Level,
+		Format:          cfg.Logging.Format,
+		TimeFieldFormat: cfg.Logging.TimeFieldFormat,
+		IncludeCaller:   cfg.Logging.IncludeCaller,
+	})
+	if err != nil {
+		log.Fatalf("init logger: %v", err)
+	}
+
 	statusRepo := healthrepository.NewStatusRepository()
 	statusService := healthservice.NewService(statusRepo)
 	healthHandler := httpcontroller.NewHealthHandler(statusService)
-	router := httpcontroller.NewRouter(healthHandler)
+	router := httpcontroller.NewRouter(healthHandler, logger)
 
 	server := httpserver.New(httpserver.Config{
 		Address:         cfg.HTTP.Address(),
@@ -37,7 +48,7 @@ func main() {
 
 	serverErrCh := make(chan error, 1)
 	go func() {
-		log.Printf("http server listening on %s", cfg.HTTP.Address())
+		logger.Info().Str("address", cfg.HTTP.Address()).Msg("http server listening")
 		if serveErr := server.Start(); serveErr != nil && !errors.Is(serveErr, http.ErrServerClosed) {
 			serverErrCh <- serveErr
 		}
@@ -48,16 +59,16 @@ func main() {
 
 	select {
 	case <-ctx.Done():
-		log.Println("shutdown signal received")
+		logger.Info().Msg("shutdown signal received")
 	case serveErr := <-serverErrCh:
-		log.Printf("http server failed: %v", serveErr)
+		logger.Error().Err(serveErr).Msg("http server failed")
 		os.Exit(1)
 	}
 
 	if shutdownErr := server.Shutdown(context.Background()); shutdownErr != nil {
-		log.Printf("graceful shutdown failed: %v", shutdownErr)
+		logger.Error().Err(shutdownErr).Msg("graceful shutdown failed")
 		os.Exit(1)
 	}
 
-	log.Println("http server stopped")
+	logger.Info().Msg("http server stopped")
 }
