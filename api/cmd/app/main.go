@@ -1,6 +1,7 @@
 package main
 
 import (
+	appconfig "api/config"
 	"context"
 	"errors"
 	"log"
@@ -9,9 +10,9 @@ import (
 	"os/signal"
 	"syscall"
 
-	appconfig "api/internal/config"
 	httpcontroller "api/internal/controller/http"
 	healthrepository "api/internal/repository/health"
+	authservice "api/internal/service/auth"
 	healthservice "api/internal/service/health"
 	"api/pkg/httpserver"
 	applogger "api/pkg/logger"
@@ -36,7 +37,9 @@ func main() {
 	statusRepo := healthrepository.NewStatusRepository()
 	statusService := healthservice.NewService(statusRepo)
 	healthHandler := httpcontroller.NewHealthHandler(statusService)
-	router := httpcontroller.NewRouter(healthHandler, logger)
+	authSvc := authservice.NewService(cfg.Auth.AccessKey, cfg.Auth.JWTSecret)
+	authHandler := httpcontroller.NewAuthHandler(authSvc)
+	router := httpcontroller.NewRouter(healthHandler, authHandler, logger)
 
 	server := httpserver.New(httpserver.Config{
 		Address:         cfg.HTTP.Address(),

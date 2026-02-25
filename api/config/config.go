@@ -12,13 +12,14 @@ import (
 )
 
 const (
-	defaultConfigPath = "config/local.yaml"
+	defaultConfigPath = "config/config.yaml"
 	defaultDotenvPath = ".env"
 )
 
 type Config struct {
 	HTTP    HTTP    `yaml:"http"`
 	Logging Logging `yaml:"logging"`
+	Auth    Auth
 }
 
 type HTTP struct {
@@ -35,6 +36,11 @@ type Logging struct {
 	Format          string `yaml:"format" env:"LOG_FORMAT" env-default:"console"`
 	TimeFieldFormat string `yaml:"time_field_format" env:"LOG_TIME_FIELD_FORMAT" env-default:"2006-01-02T15:04:05Z07:00"`
 	IncludeCaller   bool   `yaml:"include_caller" env:"LOG_INCLUDE_CALLER" env-default:"false"`
+}
+
+type Auth struct {
+	AccessKey string `yaml:"-" env:"ACCESS_KEY" env-required:"true"`
+	JWTSecret string `yaml:"-" env:"JWT_SECRET" env-required:"true"`
 }
 
 func (h HTTP) Address() string {
