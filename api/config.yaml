@@ -17,3 +17,6 @@ auth:
 
 screenshot:
   dir: "./screenshots"
+
+room:
+  grace_period: "5m"

@@ -42,7 +42,7 @@ func main() {
 	authSvc := authservice.NewService(cfg.Auth.AccessKey, cfg.Auth.JWTSecret, cfg.Auth.TokenTTL)
 	authHandler := httpcontroller.NewAuthHandler(authSvc)
 
-	roomManager := roomservice.NewManager(roomservice.DefaultGracePeriod)
+	roomManager := roomservice.NewManager(cfg.Room.GracePeriod)
 	defer roomManager.Stop()
 
 	screenshotSvc, err := screenshotservice.NewService(cfg.Screenshot.Dir)

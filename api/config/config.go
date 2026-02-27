@@ -22,6 +22,7 @@ type Config struct {
 	Logging    Logging    `yaml:"logging"`
 	Auth       Auth       `yaml:"auth"`
 	Screenshot Screenshot `yaml:"screenshot"`
+	Room       Room       `yaml:"room"`
 }
 
 type HTTP struct {
@@ -48,6 +49,10 @@ type Auth struct {
 
 type Screenshot struct {
 	Dir string `yaml:"dir" env:"SCREENSHOT_DIR" env-default:"./screenshots"`
+}
+
+type Room struct {
+	GracePeriod time.Duration `yaml:"grace_period" env:"ROOM_GRACE_PERIOD" env-default:"30s"`
 }
 
 func (h HTTP) Address() string {
