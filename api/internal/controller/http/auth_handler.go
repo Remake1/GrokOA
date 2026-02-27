@@ -6,6 +6,7 @@ import (
 	"errors"
 	"net/http"
 
+	"api/internal/dto"
 	authservice "api/internal/service/auth"
 )
 
@@ -21,14 +22,10 @@ func NewAuthHandler(service authService) *AuthHandler {
 	return &AuthHandler{service: service}
 }
 
-type authRequest struct {
-	Key string `json:"key"`
-}
-
 func (h *AuthHandler) Authorize(w http.ResponseWriter, r *http.Request) {
 	defer r.Body.Close()
 
-	var request authRequest
+	var request dto.AuthRequest
 	if err := json.NewDecoder(r.Body).Decode(&request); err != nil {
 		writeJSON(w, http.StatusBadRequest, map[string]string{"error": "invalid request body"})
 

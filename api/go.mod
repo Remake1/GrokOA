@@ -3,6 +3,7 @@ module api
 go 1.26
 
 require (
+	github.com/coder/websocket v1.8.14
 	github.com/go-chi/chi/v5 v5.2.3
 	github.com/ilyakaznacheev/cleanenv v1.5.0
 	github.com/joho/godotenv v1.5.1

@@ -71,6 +71,7 @@ func startApp(t *testing.T, accessKey string) (string, func()) {
 		"CONFIG_PATH=config.yaml",
 		"HTTP_HOST=127.0.0.1",
 		fmt.Sprintf("HTTP_PORT=%d", port),
+		"SCREENSHOT_DIR="+t.TempDir(),
 	)
 
 	if err := cmd.Start(); err != nil {

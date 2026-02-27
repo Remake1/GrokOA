@@ -14,6 +14,8 @@ import (
 	healthrepository "api/internal/repository/health"
 	authservice "api/internal/service/auth"
 	healthservice "api/internal/service/health"
+	roomservice "api/internal/service/room"
+	screenshotservice "api/internal/service/screenshot"
 	"api/pkg/httpserver"
 	applogger "api/pkg/logger"
 )
@@ -39,7 +41,17 @@ func main() {
 	healthHandler := httpcontroller.NewHealthHandler(statusService)
 	authSvc := authservice.NewService(cfg.Auth.AccessKey, cfg.Auth.JWTSecret, cfg.Auth.TokenTTL)
 	authHandler := httpcontroller.NewAuthHandler(authSvc)
-	router := httpcontroller.NewRouter(healthHandler, authHandler, logger)
+
+	roomManager := roomservice.NewManager(roomservice.DefaultGracePeriod)
+	defer roomManager.Stop()
+
+	screenshotSvc, err := screenshotservice.NewService(cfg.Screenshot.Dir)
+	if err != nil {
+		log.Fatalf("init screenshot service: %v", err)
+	}
+
+	roomHandler := httpcontroller.NewRoomHandler(roomManager, screenshotSvc, authSvc, logger)
+	router := httpcontroller.NewRouter(healthHandler, authHandler, roomHandler, logger)
 
 	server := httpserver.New(httpserver.Config{
 		Address:         cfg.HTTP.Address(),

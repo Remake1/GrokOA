@@ -9,7 +9,7 @@ import (
 	"github.com/rs/zerolog"
 )
 
-func NewRouter(healthHandler *HealthHandler, authHandler *AuthHandler, logger zerolog.Logger) http.Handler {
+func NewRouter(healthHandler *HealthHandler, authHandler *AuthHandler, roomHandler *RoomHandler, logger zerolog.Logger) http.Handler {
 	router := chi.NewRouter()
 
 	router.Use(middleware.RequestID)
@@ -21,6 +21,9 @@ func NewRouter(healthHandler *HealthHandler, authHandler *AuthHandler, logger ze
 	router.Get("/live", healthHandler.Live)
 	router.Get("/ready", healthHandler.Ready)
 	router.Post("/auth", authHandler.Authorize)
+
+	router.Get("/ws/client", roomHandler.HandleWebClient)
+	router.Get("/ws/desktop", roomHandler.HandleDesktop)
 
 	return router
 }

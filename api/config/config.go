@@ -18,9 +18,10 @@ const (
 )
 
 type Config struct {
-	HTTP    HTTP    `yaml:"http"`
-	Logging Logging `yaml:"logging"`
-	Auth    Auth    `yaml:"auth"`
+	HTTP       HTTP       `yaml:"http"`
+	Logging    Logging    `yaml:"logging"`
+	Auth       Auth       `yaml:"auth"`
+	Screenshot Screenshot `yaml:"screenshot"`
 }
 
 type HTTP struct {
@@ -43,6 +44,10 @@ type Auth struct {
 	AccessKey string        `yaml:"-" env:"ACCESS_KEY" env-required:"true"`
 	JWTSecret string        `yaml:"-" env:"JWT_SECRET" env-required:"true"`
 	TokenTTL  time.Duration `yaml:"token_ttl"`
+}
+
+type Screenshot struct {
+	Dir string `yaml:"dir" env:"SCREENSHOT_DIR" env-default:"./screenshots"`
 }
 
 func (h HTTP) Address() string {
