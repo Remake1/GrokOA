@@ -37,7 +37,7 @@ func main() {
 	statusRepo := healthrepository.NewStatusRepository()
 	statusService := healthservice.NewService(statusRepo)
 	healthHandler := httpcontroller.NewHealthHandler(statusService)
-	authSvc := authservice.NewService(cfg.Auth.AccessKey, cfg.Auth.JWTSecret)
+	authSvc := authservice.NewService(cfg.Auth.AccessKey, cfg.Auth.JWTSecret, cfg.Auth.TokenTTL)
 	authHandler := httpcontroller.NewAuthHandler(authSvc)
 	router := httpcontroller.NewRouter(healthHandler, authHandler, logger)
 

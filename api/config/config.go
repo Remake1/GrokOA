@@ -14,12 +14,13 @@ import (
 const (
 	defaultConfigPath = "config/config.yaml"
 	defaultDotenvPath = ".env"
+	defaultTokenTTL   = 4 * time.Hour
 )
 
 type Config struct {
 	HTTP    HTTP    `yaml:"http"`
 	Logging Logging `yaml:"logging"`
-	Auth    Auth
+	Auth    Auth    `yaml:"auth"`
 }
 
 type HTTP struct {
@@ -39,8 +40,9 @@ type Logging struct {
 }
 
 type Auth struct {
-	AccessKey string `yaml:"-" env:"ACCESS_KEY" env-required:"true"`
-	JWTSecret string `yaml:"-" env:"JWT_SECRET" env-required:"true"`
+	AccessKey string        `yaml:"-" env:"ACCESS_KEY" env-required:"true"`
+	JWTSecret string        `yaml:"-" env:"JWT_SECRET" env-required:"true"`
+	TokenTTL  time.Duration `yaml:"token_ttl"`
 }
 
 func (h HTTP) Address() string {
@@ -65,6 +67,10 @@ func Load() (Config, error) {
 	var cfg Config
 	if err := cleanenv.ReadConfig(configPath, &cfg); err != nil {
 		return Config{}, fmt.Errorf("read config from %q: %w", configPath, err)
+	}
+
+	if cfg.Auth.TokenTTL <= 0 {
+		cfg.Auth.TokenTTL = defaultTokenTTL
 	}
 
 	return cfg, nil

@@ -25,11 +25,15 @@ type Service struct {
 	now       func() time.Time
 }
 
-func NewService(accessKey, jwtSecret string) *Service {
+func NewService(accessKey, jwtSecret string, tokenTTL time.Duration) *Service {
+	if tokenTTL <= 0 {
+		tokenTTL = 4 * time.Hour
+	}
+
 	return &Service{
 		accessKey: accessKey,
 		jwtSecret: jwtSecret,
-		tokenTTL:  time.Hour,
+		tokenTTL:  tokenTTL,
 		now:       time.Now,
 	}
 }
