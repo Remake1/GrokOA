@@ -1,0 +1,35 @@
+name: API CI
+
+on:
+  push:
+    branches:
+      - master
+    paths:
+      - "api/**"
+
+jobs:
+  test-vet-build:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: api
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: api/go.mod
+
+      - name: Download dependencies
+        run: go mod download
+
+      - name: Run tests
+        run: go test ./...
+
+      - name: Run go vet
+        run: go vet ./...
+
+      - name: Build app
+        run: go build -v ./cmd/app
