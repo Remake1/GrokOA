@@ -2,6 +2,7 @@ import { createRouter, createWebHistory } from "vue-router";
 import HomeView from "@/views/HomeView.vue";
 import AboutView from "@/views/AboutView.vue";
 import AuthView from "@/views/AuthView.vue";
+import RoomView from "@/views/RoomView.vue";
 import { useAuth } from "@/auth/useAuth";
 
 const router = createRouter({
@@ -22,6 +23,11 @@ const router = createRouter({
       name: "auth",
       component: AuthView,
       meta: { guest: true },
+    },
+    {
+      path: "/room/setup",
+      name: "room",
+      component: RoomView,
     },
   ],
 });
