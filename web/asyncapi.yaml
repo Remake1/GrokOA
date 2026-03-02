@@ -1,0 +1,264 @@
+asyncapi: 3.0.0
+
+info:
+  title: CrackOA Room & Screenshot API
+  version: 1.0.0
+  description: |
+    WebSocket API for AI question solver with remote desktop control.
+
+    **Flow**: Web client authenticates via JWT, creates a room, desktop joins by
+    room code, client requests screenshots from desktop, server persists them and
+    relays to client.
+
+defaultContentType: application/json
+
+servers:
+  development:
+    host: localhost:8080
+    protocol: ws
+    description: Local development server
+
+channels:
+  clientChannel:
+    address: /ws/client
+    title: Web Client Channel
+    description: |
+      WebSocket channel for the authenticated web client.
+      Auth token is passed as `?token=<jwt>` query parameter.
+    parameters:
+      token:
+        description: JWT token for authentication
+    messages:
+      roomCreated:
+        $ref: '#/components/messages/roomCreated'
+      desktopConnected:
+        $ref: '#/components/messages/desktopConnected'
+      desktopDisconnected:
+        $ref: '#/components/messages/desktopDisconnected'
+      screenshot:
+        $ref: '#/components/messages/screenshot'
+      requestScreenshot:
+        $ref: '#/components/messages/requestScreenshot'
+      error:
+        $ref: '#/components/messages/error'
+
+  desktopChannel:
+    address: /ws/desktop
+    title: Desktop App Channel
+    description: |
+      WebSocket channel for the desktop application.
+      Room code is passed as `?code=<room_code>` query parameter.
+    parameters:
+      code:
+        description: 4-character room code (e.g. 2DEX)
+    messages:
+      takeScreenshot:
+        $ref: '#/components/messages/takeScreenshot'
+      screenshotData:
+        $ref: '#/components/messages/screenshotData'
+      error:
+        $ref: '#/components/messages/error'
+
+operations:
+  # --- Server sends TO web client ---
+  sendRoomCreated:
+    action: send
+    channel:
+      $ref: '#/channels/clientChannel'
+    summary: Server notifies web client that a room was created
+    messages:
+      - $ref: '#/channels/clientChannel/messages/roomCreated'
+
+  sendDesktopConnected:
+    action: send
+    channel:
+      $ref: '#/channels/clientChannel'
+    summary: Server notifies web client that a desktop has joined
+    messages:
+      - $ref: '#/channels/clientChannel/messages/desktopConnected'
+
+  sendDesktopDisconnected:
+    action: send
+    channel:
+      $ref: '#/channels/clientChannel'
+    summary: Server notifies web client that a desktop has left
+    messages:
+      - $ref: '#/channels/clientChannel/messages/desktopDisconnected'
+
+  sendScreenshotToClient:
+    action: send
+    channel:
+      $ref: '#/channels/clientChannel'
+    summary: Server sends saved screenshot (with ID) to web client
+    messages:
+      - $ref: '#/channels/clientChannel/messages/screenshot'
+
+  sendErrorToClient:
+    action: send
+    channel:
+      $ref: '#/channels/clientChannel'
+    summary: Server sends an error message to the web client
+    messages:
+      - $ref: '#/channels/clientChannel/messages/error'
+
+  # --- Server receives FROM web client ---
+  receiveRequestScreenshot:
+    action: receive
+    channel:
+      $ref: '#/channels/clientChannel'
+    summary: Web client requests a screenshot from the desktop
+    messages:
+      - $ref: '#/channels/clientChannel/messages/requestScreenshot'
+
+  # --- Server sends TO desktop ---
+  sendTakeScreenshot:
+    action: send
+    channel:
+      $ref: '#/channels/desktopChannel'
+    summary: Server instructs desktop to take a screenshot
+    messages:
+      - $ref: '#/channels/desktopChannel/messages/takeScreenshot'
+
+  sendErrorToDesktop:
+    action: send
+    channel:
+      $ref: '#/channels/desktopChannel'
+    summary: Server sends an error message to the desktop
+    messages:
+      - $ref: '#/channels/desktopChannel/messages/error'
+
+  # --- Server receives FROM desktop ---
+  receiveScreenshotData:
+    action: receive
+    channel:
+      $ref: '#/channels/desktopChannel'
+    summary: Desktop sends screenshot image data to server
+    messages:
+      - $ref: '#/channels/desktopChannel/messages/screenshotData'
+
+components:
+  messages:
+    roomCreated:
+      name: roomCreated
+      title: Room Created
+      summary: Sent to web client after room is created
+      payload:
+        $ref: '#/components/schemas/RoomCreatedPayload'
+
+    desktopConnected:
+      name: desktopConnected
+      title: Desktop Connected
+      summary: Sent to web client when a desktop joins the room
+      payload:
+        $ref: '#/components/schemas/SimplePayload'
+
+    desktopDisconnected:
+      name: desktopDisconnected
+      title: Desktop Disconnected
+      summary: Sent to web client when the desktop leaves
+      payload:
+        $ref: '#/components/schemas/SimplePayload'
+
+    requestScreenshot:
+      name: requestScreenshot
+      title: Request Screenshot
+      summary: Sent by web client to request a screenshot
+      payload:
+        $ref: '#/components/schemas/SimplePayload'
+
+    takeScreenshot:
+      name: takeScreenshot
+      title: Take Screenshot
+      summary: Sent to desktop instructing it to capture screen
+      payload:
+        $ref: '#/components/schemas/SimplePayload'
+
+    screenshotData:
+      name: screenshotData
+      title: Screenshot Data
+      summary: Sent by desktop with the captured screenshot
+      payload:
+        $ref: '#/components/schemas/ScreenshotDataPayload'
+
+    screenshot:
+      name: screenshot
+      title: Screenshot
+      summary: Sent to web client with the saved screenshot and its ID
+      payload:
+        $ref: '#/components/schemas/ScreenshotPayload'
+
+    error:
+      name: error
+      title: Error
+      summary: Error message sent by the server
+      payload:
+        $ref: '#/components/schemas/ErrorPayload'
+
+  schemas:
+    RoomCreatedPayload:
+      type: object
+      required: [type, code]
+      properties:
+        type:
+          type: string
+          const: room_created
+        code:
+          type: string
+          description: 4-character alphanumeric room code
+          examples:
+            - "2DEX"
+
+    SimplePayload:
+      type: object
+      required: [type]
+      properties:
+        type:
+          type: string
+          enum:
+            - desktop_connected
+            - desktop_disconnected
+            - request_screenshot
+            - take_screenshot
+
+    ScreenshotDataPayload:
+      type: object
+      required: [type, data]
+      properties:
+        type:
+          type: string
+          const: screenshot_data
+        data:
+          type: string
+          format: byte
+          description: Base64-encoded PNG screenshot
+
+    ScreenshotPayload:
+      type: object
+      required: [type, id, data]
+      properties:
+        type:
+          type: string
+          const: screenshot
+        id:
+          type: string
+          description: 8-character hex screenshot ID
+          examples:
+            - "a1b2c3d4"
+        data:
+          type: string
+          format: byte
+          description: Base64-encoded PNG screenshot
+
+    ErrorPayload:
+      type: object
+      required: [type, message]
+      properties:
+        type:
+          type: string
+          const: error
+        message:
+          type: string
+          description: Human-readable error description
+          examples:
+            - "desktop not connected"
+            - "invalid message format"

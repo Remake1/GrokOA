@@ -1,0 +1,4 @@
+build/
+.gocache/
+.DS_Store
+.idea/
