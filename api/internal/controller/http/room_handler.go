@@ -179,7 +179,7 @@ func (h *RoomHandler) HandleDesktop(w http.ResponseWriter, r *http.Request) {
 
 	h.readDesktop(r.Context(), conn, room)
 
-	room.SetDesktopConn(nil)
+	room.ClearDesktopConn()
 
 	if webConn := room.WebConn(); webConn != nil {
 		_ = writeWSJSON(r.Context(), webConn, dto.SimpleMsg{Type: "desktop_disconnected"})

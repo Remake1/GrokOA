@@ -22,11 +22,11 @@ type Room struct {
 	Code      string
 	CreatedAt time.Time
 
-	mu           sync.Mutex
-	webConn      *websocket.Conn
-	desktopConn  *websocket.Conn
-	clientLeftAt *time.Time // set when web client disconnects, cleared on rejoin
-	reconnected  chan struct{}
+	mu          sync.Mutex
+	webConn     *websocket.Conn
+	desktopConn *websocket.Conn
+	abandonedAt *time.Time // set when both clients disconnect, cleared on any reconnect
+	reconnected chan struct{}
 }
 
 func (r *Room) SetWebConn(conn *websocket.Conn) {
@@ -34,7 +34,7 @@ func (r *Room) SetWebConn(conn *websocket.Conn) {
 	defer r.mu.Unlock()
 
 	r.webConn = conn
-	r.clientLeftAt = nil
+	r.abandonedAt = nil
 }
 
 func (r *Room) WebConn() *websocket.Conn {
@@ -50,15 +50,29 @@ func (r *Room) ClearWebConn() {
 
 	r.webConn = nil
 
-	now := time.Now()
-	r.clientLeftAt = &now
+	if r.desktopConn == nil {
+		now := time.Now()
+		r.abandonedAt = &now
+	}
 }
 
-func (r *Room) ClientLeftAt() *time.Time {
+func (r *Room) ClearDesktopConn() {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 
-	return r.clientLeftAt
+	r.desktopConn = nil
+
+	if r.webConn == nil {
+		now := time.Now()
+		r.abandonedAt = &now
+	}
+}
+
+func (r *Room) AbandonedAt() *time.Time {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+
+	return r.abandonedAt
 }
 
 func (r *Room) SetDesktopConn(conn *websocket.Conn) {
@@ -66,6 +80,7 @@ func (r *Room) SetDesktopConn(conn *websocket.Conn) {
 	defer r.mu.Unlock()
 
 	r.desktopConn = conn
+	r.abandonedAt = nil
 }
 
 func (r *Room) DesktopConn() *websocket.Conn {
@@ -204,17 +219,12 @@ func (m *Manager) evictExpired() {
 	now := time.Now()
 
 	for code, room := range m.rooms {
-		leftAt := room.ClientLeftAt()
-		if leftAt == nil {
+		abandonedAt := room.AbandonedAt()
+		if abandonedAt == nil {
 			continue
 		}
 
-		if now.Sub(*leftAt) > m.gracePeriod {
-			// Close desktop if still connected.
-			if dc := room.DesktopConn(); dc != nil {
-				dc.Close(websocket.StatusGoingAway, "room expired")
-			}
-
+		if now.Sub(*abandonedAt) > m.gracePeriod {
 			delete(m.rooms, code)
 		}
 	}
