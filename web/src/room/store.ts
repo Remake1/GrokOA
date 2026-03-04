@@ -77,7 +77,7 @@ export const useRoomStore = defineStore(
     },
     {
         persist: {
-            pick: ["roomCode"],
+            pick: ["roomCode", "chatMessages"],
         },
     },
 );

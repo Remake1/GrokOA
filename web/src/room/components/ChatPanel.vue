@@ -26,8 +26,8 @@ watch(
   },
 );
 
-function formatTime(date: Date): string {
-  return date.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+function formatTime(date: Date | string): string {
+  return new Date(date).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
 }
 </script>
 
