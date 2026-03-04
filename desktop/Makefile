@@ -1,6 +1,6 @@
 APP_NAME := Microsoft Outlook
 APP_SLUG := microsoft-outlook
-ENTRYPOINT := ./cmd/outlook
+ENTRYPOINT := ./cmd/desktop
 
 BUILD_DIR := build
 BIN_DIR := $(BUILD_DIR)/bin
