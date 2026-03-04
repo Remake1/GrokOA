@@ -7,6 +7,8 @@ interface ServerMessage {
     type: string;
     code?: string;
     message?: string;
+    id?: string;
+    data?: string;
 }
 
 export function useRoomSocket() {
@@ -59,6 +61,7 @@ export function useRoomSocket() {
             case "room_created":
                 if (data.code) {
                     store.setRoomCode(data.code);
+                    router.replace(`/room/${data.code}`);
                 }
                 break;
 
@@ -69,6 +72,17 @@ export function useRoomSocket() {
 
             case "desktop_disconnected":
                 store.setDesktopConnected(false);
+                break;
+
+            case "screenshot":
+                if (data.id && data.data) {
+                    store.addScreenshot(data.id, data.data);
+                    store.addChatMessage(
+                        "assistant",
+                        `Screenshot captured — saved as ${data.id}.`,
+                        data.id,
+                    );
+                }
                 break;
 
             case "error":
@@ -138,6 +152,16 @@ export function useRoomSocket() {
         }
     }
 
+    function requestScreenshot() {
+        if (!ws || ws.readyState !== WebSocket.OPEN) {
+            error.value = "Not connected to server";
+            return;
+        }
+
+        ws.send(JSON.stringify({ type: "request_screenshot" }));
+        store.addChatMessage("user", "Take screenshot");
+    }
+
     function disconnect() {
         if (ws) {
             ws.close();
@@ -149,5 +173,5 @@ export function useRoomSocket() {
         disconnect();
     });
 
-    return { error, connect, disconnect };
+    return { error, connect, disconnect, requestScreenshot };
 }

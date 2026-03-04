@@ -2,7 +2,7 @@ import { createRouter, createWebHistory } from "vue-router";
 import HomeView from "@/views/HomeView.vue";
 import AboutView from "@/views/AboutView.vue";
 import AuthView from "@/views/AuthView.vue";
-import RoomView from "@/views/RoomView.vue";
+import RoomSetupView from "@/views/RoomSetupView.vue";
 import RoomChatView from "@/views/RoomChatView.vue";
 import { useAuth } from "@/auth/useAuth";
 
@@ -28,7 +28,7 @@ const router = createRouter({
     {
       path: "/room/setup",
       name: "room",
-      component: RoomView,
+      component: RoomSetupView,
     },
     {
       path: "/room/:roomId",
