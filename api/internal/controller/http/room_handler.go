@@ -167,6 +167,8 @@ func (h *RoomHandler) HandleDesktop(w http.ResponseWriter, r *http.Request) {
 	}
 	defer conn.CloseNow()
 
+	conn.SetReadLimit(10 << 20) // 10 MB – desktop sends base64-encoded screenshots.
+
 	room.SetDesktopConn(conn)
 
 	h.logger.Info().Str("room", code).Msg("desktop connected to room")
