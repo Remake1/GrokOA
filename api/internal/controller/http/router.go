@@ -18,12 +18,14 @@ func NewRouter(healthHandler *HealthHandler, authHandler *AuthHandler, roomHandl
 	router.Use(middleware.Recoverer)
 	router.Use(middleware.Timeout(30 * time.Second))
 
-	router.Get("/live", healthHandler.Live)
-	router.Get("/ready", healthHandler.Ready)
-	router.Post("/auth", authHandler.Authorize)
+	router.Route("/api", func(r chi.Router) {
+		r.Get("/live", healthHandler.Live)
+		r.Get("/ready", healthHandler.Ready)
+		r.Post("/auth", authHandler.Authorize)
 
-	router.Get("/ws/client", roomHandler.HandleWebClient)
-	router.Get("/ws/desktop", roomHandler.HandleDesktop)
+		r.Get("/ws/client", roomHandler.HandleWebClient)
+		r.Get("/ws/desktop", roomHandler.HandleDesktop)
+	})
 
 	return router
 }

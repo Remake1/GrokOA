@@ -20,7 +20,7 @@ servers:
 
 channels:
   clientChannel:
-    address: /ws/client
+    address: /api/ws/client
     title: Web Client Channel
     description: |
       WebSocket channel for the authenticated web client.
@@ -43,7 +43,7 @@ channels:
         $ref: '#/components/messages/error'
 
   desktopChannel:
-    address: /ws/desktop
+    address: /api/ws/desktop
     title: Desktop App Channel
     description: |
       WebSocket channel for the desktop application.

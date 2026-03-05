@@ -1,7 +1,7 @@
 import { test, expect } from "@playwright/test";
 
 const MOCK_TOKEN =
-    "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJleHAiOjE3NzIzNTA4NjYsImlhdCI6MTc3MjMzNjQ2Nn0.eW2piuiBYRlhzE0Wqfw6anjVPGc5le0Y7FuKmjPL14k";
+    "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJleHAiOjE4OTM0NTYwMDAsImlhdCI6MTg5MzQ1MjQwMH0.dummy-signature";
 
 function mockAuthRoute(page: import("@playwright/test").Page) {
     return page.route("**/api/auth", async (route) => {

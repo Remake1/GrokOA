@@ -2,7 +2,7 @@ import { test, expect } from "@playwright/test";
 import type { WebSocketRoute } from "@playwright/test";
 
 const MOCK_TOKEN =
-    "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJleHAiOjE3NzIzNTA4NjYsImlhdCI6MTc3MjMzNjQ2Nn0.eW2piuiBYRlhzE0Wqfw6anjVPGc5le0Y7FuKmjPL14k";
+    "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJleHAiOjE4OTM0NTYwMDAsImlhdCI6MTg5MzQ1MjQwMH0.dummy-signature";
 
 const ROOM_CODE = "A1B2";
 
@@ -79,7 +79,7 @@ test.describe("Room Setup", () => {
         ws.send(JSON.stringify({ type: "desktop_connected" }));
 
         await expect(page).toHaveURL(`/room/${ROOM_CODE}`);
-        await expect(page.getByText(`Room ${ROOM_CODE}`)).toBeVisible();
+        await expect(page.getByText(ROOM_CODE, { exact: true })).toBeVisible();
     });
 
     test("desktop_disconnected updates status on setup page", async ({ page }) => {

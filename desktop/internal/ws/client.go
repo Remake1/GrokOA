@@ -158,7 +158,7 @@ func (c *Client) Connected() bool {
 // ── internal ────────────────────────────────────────────────────────
 
 func (c *Client) dial(ctx context.Context, code string) error {
-	url := fmt.Sprintf("%s/ws/desktop?code=%s", c.serverURL, code)
+	url := fmt.Sprintf("%s/api/ws/desktop?code=%s", c.serverURL, code)
 	c.log("Connecting to %s …", url)
 
 	dialCtx, dialCancel := context.WithTimeout(ctx, 10*time.Second)

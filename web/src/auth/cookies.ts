@@ -1,14 +1,63 @@
 const COOKIE_NAME = "token";
 
+interface JwtPayload {
+    exp?: number;
+}
+
+function parsePayload(token: string): JwtPayload | null {
+    const parts = token.split(".");
+    if (parts.length < 2 || !parts[1]) {
+        return null;
+    }
+
+    try {
+        const b64url = parts[1];
+        const b64 = b64url.replace(/-/g, "+").replace(/_/g, "/");
+        const padded = b64 + "=".repeat((4 - (b64.length % 4)) % 4);
+
+        return JSON.parse(atob(padded)) as JwtPayload;
+    } catch {
+        return null;
+    }
+}
+
+function tokenMaxAge(token: string): number | null {
+    const payload = parsePayload(token);
+    if (typeof payload?.exp !== "number") {
+        return null;
+    }
+
+    return payload.exp - Math.floor(Date.now() / 1000);
+}
+
 export function getToken(): string | null {
     const match = document.cookie.match(
         new RegExp(`(?:^|;\\s*)${COOKIE_NAME}=([^;]*)`),
     );
-    return match ? decodeURIComponent(match[1] ?? "") : null;
+    const token = match ? decodeURIComponent(match[1] ?? "") : null;
+    if (!token) {
+        return null;
+    }
+
+    const maxAge = tokenMaxAge(token);
+    if (maxAge !== null && maxAge <= 0) {
+        removeToken();
+        return null;
+    }
+
+    return token;
 }
 
 export function setToken(token: string): void {
-    document.cookie = `${COOKIE_NAME}=${encodeURIComponent(token)}; path=/; SameSite=Strict`;
+    const maxAge = tokenMaxAge(token);
+    if (maxAge !== null && maxAge <= 0) {
+        removeToken();
+        return;
+    }
+
+    const base = `${COOKIE_NAME}=${encodeURIComponent(token)}; path=/; SameSite=Strict`;
+    document.cookie =
+        maxAge !== null ? `${base}; max-age=${maxAge}` : base;
 }
 
 export function removeToken(): void {

@@ -17,7 +17,7 @@ func TestRoomCreation(t *testing.T) {
 
 	t.Run("web client creates room and receives room code", func(t *testing.T) {
 		token := getToken(t, baseURL, "x")
-		wsURL := "ws" + strings.TrimPrefix(baseURL, "http") + "/ws/client?token=" + token
+		wsURL := "ws" + strings.TrimPrefix(baseURL, "http") + "/api/ws/client?token=" + token
 
 		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 		defer cancel()
@@ -59,7 +59,7 @@ func TestRoomCreation(t *testing.T) {
 	})
 
 	t.Run("web client without token gets rejected", func(t *testing.T) {
-		wsURL := "ws" + strings.TrimPrefix(baseURL, "http") + "/ws/client"
+		wsURL := "ws" + strings.TrimPrefix(baseURL, "http") + "/api/ws/client"
 
 		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 		defer cancel()
@@ -72,7 +72,7 @@ func TestRoomCreation(t *testing.T) {
 	})
 
 	t.Run("web client with invalid token gets rejected", func(t *testing.T) {
-		wsURL := "ws" + strings.TrimPrefix(baseURL, "http") + "/ws/client?token=invalid.token.here"
+		wsURL := "ws" + strings.TrimPrefix(baseURL, "http") + "/api/ws/client?token=invalid.token.here"
 
 		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 		defer cancel()
@@ -91,7 +91,7 @@ func TestRoomCreation(t *testing.T) {
 		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 		defer cancel()
 
-		clientConn, _, err := websocket.Dial(ctx, wsBase+"/ws/client?token="+token, nil)
+		clientConn, _, err := websocket.Dial(ctx, wsBase+"/api/ws/client?token="+token, nil)
 		if err != nil {
 			t.Fatalf("client dial: %v", err)
 		}
@@ -110,7 +110,7 @@ func TestRoomCreation(t *testing.T) {
 			t.Fatalf("unmarshal room_created: %v", err)
 		}
 
-		desktopConn, _, err := websocket.Dial(ctx, wsBase+"/ws/desktop?code="+roomMsg.Code, nil)
+		desktopConn, _, err := websocket.Dial(ctx, wsBase+"/api/ws/desktop?code="+roomMsg.Code, nil)
 		if err != nil {
 			t.Fatalf("desktop dial: %v", err)
 		}
@@ -139,7 +139,7 @@ func TestRoomCreation(t *testing.T) {
 	})
 
 	t.Run("desktop with invalid code gets rejected", func(t *testing.T) {
-		wsURL := "ws" + strings.TrimPrefix(baseURL, "http") + "/ws/desktop?code=ZZZZ"
+		wsURL := "ws" + strings.TrimPrefix(baseURL, "http") + "/api/ws/desktop?code=ZZZZ"
 
 		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 		defer cancel()
@@ -159,7 +159,7 @@ func TestRoomCreation(t *testing.T) {
 		defer cancel()
 
 		// 1. Create room.
-		clientConn, _, err := websocket.Dial(ctx, wsBase+"/ws/client?token="+token, nil)
+		clientConn, _, err := websocket.Dial(ctx, wsBase+"/api/ws/client?token="+token, nil)
 		if err != nil {
 			t.Fatalf("client dial: %v", err)
 		}
@@ -181,7 +181,7 @@ func TestRoomCreation(t *testing.T) {
 		t.Logf("room created: %s", roomCode)
 
 		// 2. Desktop joins.
-		desktopConn, _, err := websocket.Dial(ctx, wsBase+"/ws/desktop?code="+roomCode, nil)
+		desktopConn, _, err := websocket.Dial(ctx, wsBase+"/api/ws/desktop?code="+roomCode, nil)
 		if err != nil {
 			t.Fatalf("desktop dial: %v", err)
 		}
@@ -207,7 +207,7 @@ func TestRoomCreation(t *testing.T) {
 		time.Sleep(200 * time.Millisecond)
 
 		// 4. Client reconnects with room code.
-		clientConn2, _, err := websocket.Dial(ctx, wsBase+"/ws/client?token="+token+"&room="+roomCode, nil)
+		clientConn2, _, err := websocket.Dial(ctx, wsBase+"/api/ws/client?token="+token+"&room="+roomCode, nil)
 		if err != nil {
 			t.Fatalf("reconnect dial: %v", err)
 		}

@@ -2,7 +2,7 @@ package dto
 
 import "encoding/json"
 
-// AuthRequest is the request body for POST /auth.
+// AuthRequest is the request body for POST /api/auth.
 type AuthRequest struct {
 	Key string `json:"key"`
 }

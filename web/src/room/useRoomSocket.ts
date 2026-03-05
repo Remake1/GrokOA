@@ -61,7 +61,6 @@ export function useRoomSocket() {
             case "room_created":
                 if (data.code) {
                     store.setRoomCode(data.code);
-                    router.replace(`/room/${data.code}`);
                 }
                 break;
 

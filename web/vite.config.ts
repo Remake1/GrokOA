@@ -14,18 +14,11 @@ export default defineConfig({
   },
   server: {
     proxy: {
-      "/api/ws": {
-        target: "ws://localhost:8080",
-        ws: true,
-        rewriteWsOrigin: true,
-        timeout: 0,
-        rewrite: (p) => p.replace(/^\/api/, ""),
-      },
       "/api": {
         target: "http://localhost:8080",
         changeOrigin: true,
         ws: true,
-        rewrite: (p) => p.replace(/^\/api/, ""), // no /api prefix yet
+        timeout: 0,
       },
     },
   },

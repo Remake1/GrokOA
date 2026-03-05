@@ -97,7 +97,7 @@ func waitForLiveEndpoint(t *testing.T, baseURL string, cmd *exec.Cmd, logFile *o
 	deadline := time.Now().Add(15 * time.Second)
 
 	for time.Now().Before(deadline) {
-		resp, err := client.Get(baseURL + "/live")
+		resp, err := client.Get(baseURL + "/api/live")
 		if err == nil {
 			_, _ = io.Copy(io.Discard, resp.Body)
 			_ = resp.Body.Close()
@@ -126,7 +126,7 @@ func postAuth(t *testing.T, baseURL, key string) (int, []byte) {
 		t.Fatalf("marshal auth payload: %v", err)
 	}
 
-	req, err := http.NewRequest(http.MethodPost, baseURL+"/auth", bytes.NewReader(payload))
+	req, err := http.NewRequest(http.MethodPost, baseURL+"/api/auth", bytes.NewReader(payload))
 	if err != nil {
 		t.Fatalf("create auth request: %v", err)
 	}

@@ -23,7 +23,7 @@ func TestScreenshotWorkflow(t *testing.T) {
 		defer cancel()
 
 		// 1. Client creates room.
-		clientConn, _, err := websocket.Dial(ctx, wsBase+"/ws/client?token="+token, nil)
+		clientConn, _, err := websocket.Dial(ctx, wsBase+"/api/ws/client?token="+token, nil)
 		if err != nil {
 			t.Fatalf("client dial: %v", err)
 		}
@@ -45,7 +45,7 @@ func TestScreenshotWorkflow(t *testing.T) {
 		t.Logf("room created: %s", roomMsg.Code)
 
 		// 2. Desktop joins.
-		desktopConn, _, err := websocket.Dial(ctx, wsBase+"/ws/desktop?code="+roomMsg.Code, nil)
+		desktopConn, _, err := websocket.Dial(ctx, wsBase+"/api/ws/desktop?code="+roomMsg.Code, nil)
 		if err != nil {
 			t.Fatalf("desktop dial: %v", err)
 		}
@@ -165,7 +165,7 @@ func TestScreenshotWorkflow(t *testing.T) {
 		ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 		defer cancel()
 
-		clientConn, _, err := websocket.Dial(ctx, wsBase+"/ws/client?token="+token, nil)
+		clientConn, _, err := websocket.Dial(ctx, wsBase+"/api/ws/client?token="+token, nil)
 		if err != nil {
 			t.Fatalf("client dial: %v", err)
 		}
@@ -180,7 +180,7 @@ func TestScreenshotWorkflow(t *testing.T) {
 		var roomMsg struct{ Code string }
 		_ = json.Unmarshal(data, &roomMsg)
 
-		desktopConn, _, err := websocket.Dial(ctx, wsBase+"/ws/desktop?code="+roomMsg.Code, nil)
+		desktopConn, _, err := websocket.Dial(ctx, wsBase+"/api/ws/desktop?code="+roomMsg.Code, nil)
 		if err != nil {
 			t.Fatalf("desktop dial: %v", err)
 		}
