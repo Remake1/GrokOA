@@ -56,6 +56,13 @@ func NewClient(serverURL string) *Client {
 	return &Client{serverURL: serverURL}
 }
 
+// SetServerURL updates the target server base URL used for future dials.
+func (c *Client) SetServerURL(serverURL string) {
+	c.mu.Lock()
+	c.serverURL = serverURL
+	c.mu.Unlock()
+}
+
 // ConnectAndServe connects to the room and keeps the connection alive,
 // automatically reconnecting on disconnect with exponential backoff.
 // It blocks until Disconnect() is called.
@@ -158,7 +165,11 @@ func (c *Client) Connected() bool {
 // ── internal ────────────────────────────────────────────────────────
 
 func (c *Client) dial(ctx context.Context, code string) error {
-	url := fmt.Sprintf("%s/api/ws/desktop?code=%s", c.serverURL, code)
+	c.mu.Lock()
+	serverURL := c.serverURL
+	c.mu.Unlock()
+
+	url := fmt.Sprintf("%s/api/ws/desktop?code=%s", serverURL, code)
 	c.log("Connecting to %s …", url)
 
 	dialCtx, dialCancel := context.WithTimeout(ctx, 10*time.Second)

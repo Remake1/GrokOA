@@ -3,6 +3,7 @@ package ui
 import (
 	"image"
 	"image/color"
+	"net/url"
 	"strings"
 	"sync"
 	"time"
@@ -39,6 +40,7 @@ var (
 // UI holds all mutable state for the Gio interface.
 type UI struct {
 	codeEditor widget.Editor
+	hostEditor widget.Editor
 	connectBtn widget.Clickable
 	disconnBtn widget.Clickable
 	logList    widget.List
@@ -50,16 +52,22 @@ type UI struct {
 	errMsg    string
 
 	// Callbacks set by the caller.
-	OnConnect    func(code string)
+	OnConnect    func(code string, host string)
 	OnDisconnect func()
 }
 
 // NewUI creates and returns a new UI instance.
-func NewUI() *UI {
+func NewUI(defaultHost string) *UI {
+	if strings.TrimSpace(defaultHost) == "" {
+		defaultHost = "ws://localhost"
+	}
+
 	u := &UI{}
 	u.codeEditor.SingleLine = true
 	u.codeEditor.MaxLen = 4
 	u.codeEditor.Filter = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789"
+	u.hostEditor.SingleLine = true
+	u.hostEditor.SetText(defaultHost)
 	u.logList.List.Axis = layout.Vertical
 	return u
 }
@@ -109,12 +117,20 @@ func (u *UI) Run(window *app.Window, stealthStatus func() string) error {
 			// Handle button clicks.
 			if u.connectBtn.Clicked(gtx) {
 				code := strings.ToUpper(strings.TrimSpace(u.codeEditor.Text()))
+				host := strings.TrimSpace(u.hostEditor.Text())
 				if len(code) == 4 && isAlphaNum(code) {
+					if !isValidWebSocketHost(host) {
+						u.mu.Lock()
+						u.errMsg = "Enter a valid host, e.g. ws://localhost"
+						u.mu.Unlock()
+						continue
+					}
+
 					u.mu.Lock()
 					u.errMsg = ""
 					u.mu.Unlock()
 					if u.OnConnect != nil {
-						u.OnConnect(code)
+						u.OnConnect(code, host)
 					}
 				} else {
 					u.mu.Lock()
@@ -195,6 +211,28 @@ func (u *UI) layoutCard(gtx layout.Context, theme *material.Theme, stealthStatus
 // layoutForm draws the room-code entry form.
 func (u *UI) layoutForm(gtx layout.Context, theme *material.Theme, errMsg string) layout.Dimensions {
 	return layout.Flex{Axis: layout.Vertical, Alignment: layout.Middle}.Layout(gtx,
+		layout.Rigid(func(gtx layout.Context) layout.Dimensions {
+			lbl := material.Body2(theme, "WebSocket Host")
+			lbl.Color = colTextSec
+			return lbl.Layout(gtx)
+		}),
+		layout.Rigid(layout.Spacer{Height: unit.Dp(8)}.Layout),
+		layout.Rigid(func(gtx layout.Context) layout.Dimensions {
+			gtx.Constraints.Max.X = gtx.Dp(unit.Dp(320))
+			gtx.Constraints.Min.X = gtx.Dp(unit.Dp(320))
+			return drawRoundedRect(gtx, colInputBg, 8, func(gtx layout.Context) layout.Dimensions {
+				return drawBorder(gtx, colInputBrd, 8, 1, func(gtx layout.Context) layout.Dimensions {
+					return layout.UniformInset(unit.Dp(10)).Layout(gtx, func(gtx layout.Context) layout.Dimensions {
+						ed := material.Editor(theme, &u.hostEditor, "ws://localhost")
+						ed.Color = colTextPri
+						ed.HintColor = colTextSec
+						ed.TextSize = unit.Sp(16)
+						return ed.Layout(gtx)
+					})
+				})
+			})
+		}),
+		layout.Rigid(layout.Spacer{Height: unit.Dp(12)}.Layout),
 		layout.Rigid(func(gtx layout.Context) layout.Dimensions {
 			lbl := material.Body2(theme, "Room Code")
 			lbl.Color = colTextSec
@@ -305,6 +343,17 @@ func isAlphaNum(s string) bool {
 		}
 	}
 	return true
+}
+
+func isValidWebSocketHost(raw string) bool {
+	u, err := url.Parse(raw)
+	if err != nil {
+		return false
+	}
+	if u.Scheme != "ws" && u.Scheme != "wss" {
+		return false
+	}
+	return u.Host != ""
 }
 
 func drawRoundedRect(gtx layout.Context, bg color.NRGBA, radius int, w layout.Widget) layout.Dimensions {

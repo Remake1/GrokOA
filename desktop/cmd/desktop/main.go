@@ -13,7 +13,7 @@ import (
 	"gioui.org/unit"
 )
 
-const defaultServerURL = "ws://localhost:8080"
+const defaultServerURL = "ws://localhost"
 
 func main() {
 	go func() {
@@ -33,7 +33,7 @@ func main() {
 		}
 
 		client := ws.NewClient(serverURL)
-		appUI := ui.NewUI()
+		appUI := ui.NewUI(serverURL)
 
 		// Wire logging: WS events → log window + redraw.
 		client.OnLog = func(msg string) {
@@ -72,8 +72,10 @@ func main() {
 		}
 
 		// Wire UI connect button → WS connect (blocks, auto-reconnects).
-		appUI.OnConnect = func(code string) {
+		appUI.OnConnect = func(code string, host string) {
 			go func() {
+				client.SetServerURL(host)
+				appUI.AddLog("Using server host: " + host)
 				appUI.SetConnected(true, code)
 				window.Invalidate()
 				// Blocks until Disconnect() is called.
