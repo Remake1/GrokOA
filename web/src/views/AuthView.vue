@@ -1,9 +1,9 @@
 <script setup lang="ts">
-import AuthCard from "@/components/AuthCard.vue";
+import AuthForm from "@/components/AuthForm.vue";
 </script>
 
 <template>
   <div class="flex min-h-screen items-center justify-center px-4">
-    <AuthCard />
+    <AuthForm />
   </div>
 </template>

@@ -4,6 +4,7 @@ import AboutView from "@/views/AboutView.vue";
 import AuthView from "@/views/AuthView.vue";
 import RoomSetupView from "@/views/RoomSetupView.vue";
 import RoomChatView from "@/views/RoomChatView.vue";
+import SettingsView from "@/views/SettingsView.vue";
 import { useAuth } from "@/auth/useAuth";
 
 const router = createRouter({
@@ -34,6 +35,11 @@ const router = createRouter({
       path: "/room/:roomId",
       name: "room-chat",
       component: RoomChatView,
+    },
+    {
+      path: "/settings",
+      name: "settings",
+      component: SettingsView,
     },
   ],
 });

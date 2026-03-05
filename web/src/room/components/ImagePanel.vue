@@ -38,7 +38,7 @@ defineEmits<{
     </div>
 
     <!-- Thumbnails (hidden when collapsed) -->
-    <ScrollArea v-if="!collapsed" class="flex-1">
+    <ScrollArea v-if="!collapsed" class="flex-1 overflow-hidden">
       <div class="flex flex-col gap-3 p-3">
         <div
           v-for="img in images"

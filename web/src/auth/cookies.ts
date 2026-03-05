@@ -1,4 +1,6 @@
 const COOKIE_NAME = "token";
+/** Minimum remaining lifetime (in seconds) before a token is considered expired. */
+const MIN_TOKEN_LIFETIME = 3600; // 1 hour
 
 interface JwtPayload {
     exp?: number;
@@ -40,7 +42,7 @@ export function getToken(): string | null {
     }
 
     const maxAge = tokenMaxAge(token);
-    if (maxAge !== null && maxAge <= 0) {
+    if (maxAge !== null && maxAge < MIN_TOKEN_LIFETIME) {
         removeToken();
         return null;
     }

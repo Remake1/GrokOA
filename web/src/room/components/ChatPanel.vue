@@ -61,7 +61,7 @@ function formatTime(date: Date | string): string {
     </div>
 
     <!-- Messages -->
-    <ScrollArea ref="scrollRef" class="flex-1">
+    <ScrollArea ref="scrollRef" class="flex-1 overflow-hidden">
       <div class="flex flex-col gap-3 p-4">
         <div
           v-for="msg in messages"
