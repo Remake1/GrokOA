@@ -2,16 +2,18 @@
 import { ref, computed, watch, onMounted } from "vue";
 import { useRoute } from "vue-router";
 import RoomLayout from "@/room/components/RoomLayout.vue";
+import SettingsModal from "@/room/components/SettingsModal.vue";
 import { useRoomStore } from "@/room/store";
 import { useRoomSocket } from "@/room/useRoomSocket";
 
 const route = useRoute();
 const store = useRoomStore();
 const roomCode = computed(() => store.roomCode ?? (route.params.roomId as string));
-const { error, connect, requestScreenshot } = useRoomSocket();
+const { error, connect, disconnect, requestScreenshot } = useRoomSocket();
 
 const MAX_SCREENSHOTS = 5;
 const showImagePanel = ref(true);
+const showSettings = ref(false);
 const screenshotDisabled = computed(() => store.screenshots.length >= MAX_SCREENSHOTS);
 
 function toggleImagePanel() {
@@ -45,11 +47,13 @@ onMounted(() => {
     @screenshot="requestScreenshot"
     @toggle-images="toggleImagePanel"
     @ask-ai="() => {}"
-    @settings="() => {}"
+    @settings="showSettings = true"
     @reconnect="connect"
     @select-image="() => {}"
     @remove-screenshot="store.removeScreenshot"
   />
+
+  <SettingsModal v-model:open="showSettings" :disconnect="disconnect" />
 
   <p v-if="error" class="fixed bottom-4 left-1/2 -translate-x-1/2 rounded-lg bg-destructive px-4 py-2 text-sm text-destructive-foreground shadow-lg">
     {{ error }}
