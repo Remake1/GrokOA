@@ -75,7 +75,7 @@ func (h *RoomHandler) HandleWebClient(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func (h *RoomHandler) createAndJoinRoom(ctx context.Context, conn *websocket.Conn) {
+func (h *RoomHandler) createAndJoinRoom(_ context.Context, conn *websocket.Conn) {
 	code, err := h.rooms.CreateRoom()
 	if err != nil {
 		h.logger.Error().Err(err).Msg("failed to create room")
@@ -89,6 +89,11 @@ func (h *RoomHandler) createAndJoinRoom(ctx context.Context, conn *websocket.Con
 
 	h.logger.Info().Str("room", code).Msg("room created by web client")
 
+	// Detach from HTTP request context so the read loop isn't killed
+	// when the request middleware finishes.
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
 	if err := writeWSJSON(ctx, conn, dto.RoomCreatedMsg{Type: "room_created", Code: code}); err != nil {
 		return
 	}
@@ -97,7 +102,11 @@ func (h *RoomHandler) createAndJoinRoom(ctx context.Context, conn *websocket.Con
 	h.handleClientDisconnect(room)
 }
 
-func (h *RoomHandler) rejoinRoom(ctx context.Context, conn *websocket.Conn, code string) {
+func (h *RoomHandler) rejoinRoom(_ context.Context, conn *websocket.Conn, code string) {
+	// Detach from HTTP request context.
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
 	room, ok := h.rooms.GetRoom(code)
 	if !ok {
 		h.logger.Warn().Str("room", code).Msg("rejoin failed: room not found or expired")
@@ -173,16 +182,21 @@ func (h *RoomHandler) HandleDesktop(w http.ResponseWriter, r *http.Request) {
 
 	h.logger.Info().Str("room", code).Msg("desktop connected to room")
 
+	// Detach from HTTP request context so the desktop read loop isn't
+	// killed when middleware finishes.
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
 	if webConn := room.WebConn(); webConn != nil {
-		_ = writeWSJSON(r.Context(), webConn, dto.SimpleMsg{Type: "desktop_connected"})
+		_ = writeWSJSON(ctx, webConn, dto.SimpleMsg{Type: "desktop_connected"})
 	}
 
-	h.readDesktop(r.Context(), conn, room)
+	h.readDesktop(ctx, conn, room)
 
 	room.ClearDesktopConn()
 
 	if webConn := room.WebConn(); webConn != nil {
-		_ = writeWSJSON(r.Context(), webConn, dto.SimpleMsg{Type: "desktop_disconnected"})
+		_ = writeWSJSON(ctx, webConn, dto.SimpleMsg{Type: "desktop_disconnected"})
 	}
 }
 

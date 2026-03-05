@@ -17,6 +17,10 @@ export function useRoomSocket() {
     const error = ref<string | null>(null);
 
     let ws: WebSocket | null = null;
+    let manualDisconnect = false;
+    let reconnectTimer: ReturnType<typeof setTimeout> | null = null;
+    let reconnectDelay = 1000;
+    const MAX_RECONNECT_DELAY = 10000;
 
     function getPersistedRoomCode(): string | null {
         if (store.roomCode) return store.roomCode;
@@ -64,6 +68,12 @@ export function useRoomSocket() {
                 }
                 break;
 
+            case "room_rejoined":
+                if (data.code) {
+                    store.setRoomCode(data.code);
+                }
+                break;
+
             case "desktop_connected":
                 store.setDesktopConnected(true);
                 router.push(`/room/${store.roomCode}`);
@@ -98,6 +108,7 @@ export function useRoomSocket() {
     function attachHandlers(socket: WebSocket) {
         socket.onopen = () => {
             store.setServerConnected(true);
+            reconnectDelay = 1000;
         };
 
         socket.onmessage = handleMessage;
@@ -105,10 +116,46 @@ export function useRoomSocket() {
         socket.onclose = () => {
             store.setServerConnected(false);
             ws = null;
+
+            if (!manualDisconnect) {
+                scheduleReconnect();
+            }
         };
     }
 
+    function scheduleReconnect() {
+        if (reconnectTimer) return;
+
+        reconnectTimer = setTimeout(() => {
+            reconnectTimer = null;
+
+            const code = getPersistedRoomCode();
+            if (!code) {
+                // No room to reconnect to — start fresh.
+                connectFresh();
+                return;
+            }
+
+            try {
+                const url = buildWsUrl(code);
+                ws = new WebSocket(url);
+                attachHandlers(ws);
+
+                ws.onerror = () => {
+                    ws = null;
+                    // Increase delay for next attempt.
+                    reconnectDelay = Math.min(reconnectDelay * 2, MAX_RECONNECT_DELAY);
+                    scheduleReconnect();
+                };
+            } catch {
+                reconnectDelay = Math.min(reconnectDelay * 2, MAX_RECONNECT_DELAY);
+                scheduleReconnect();
+            }
+        }, reconnectDelay);
+    }
+
     function connectFresh() {
+        manualDisconnect = false;
         store.reset();
         const url = buildWsUrl();
         ws = new WebSocket(url);
@@ -125,6 +172,7 @@ export function useRoomSocket() {
             disconnect();
         }
 
+        manualDisconnect = false;
         error.value = null;
 
         try {
@@ -162,6 +210,13 @@ export function useRoomSocket() {
     }
 
     function disconnect() {
+        manualDisconnect = true;
+
+        if (reconnectTimer) {
+            clearTimeout(reconnectTimer);
+            reconnectTimer = null;
+        }
+
         if (ws) {
             ws.close();
             ws = null;

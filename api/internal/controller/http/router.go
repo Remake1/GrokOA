@@ -16,13 +16,17 @@ func NewRouter(healthHandler *HealthHandler, authHandler *AuthHandler, roomHandl
 	router.Use(middleware.RealIP)
 	router.Use(RequestLogger(logger))
 	router.Use(middleware.Recoverer)
-	router.Use(middleware.Timeout(30 * time.Second))
 
 	router.Route("/api", func(r chi.Router) {
-		r.Get("/live", healthHandler.Live)
-		r.Get("/ready", healthHandler.Ready)
-		r.Post("/auth", authHandler.Authorize)
+		// REST endpoints get a 30s timeout.
+		r.Group(func(r chi.Router) {
+			r.Use(middleware.Timeout(30 * time.Second))
+			r.Get("/live", healthHandler.Live)
+			r.Get("/ready", healthHandler.Ready)
+			r.Post("/auth", authHandler.Authorize)
+		})
 
+		// WebSocket endpoints – no timeout (long-lived connections).
 		r.Get("/ws/client", roomHandler.HandleWebClient)
 		r.Get("/ws/desktop", roomHandler.HandleDesktop)
 	})
