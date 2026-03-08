@@ -12,6 +12,8 @@ export const useRoomStore = defineStore(
         const desktopConnected = ref(false);
         const screenshots = ref<ImagePreview[]>([]);
         const chatMessages = ref<ChatMessage[]>([]);
+        const aiRequestStatus = ref<"idle" | "streaming">("idle");
+        const activeAiMessageId = ref<string | null>(null);
 
         function setRoomCode(code: string) {
             roomCode.value = code;
@@ -41,15 +43,74 @@ export const useRoomStore = defineStore(
         function addChatMessage(
             role: "user" | "assistant",
             content: string,
-            imageId?: string,
+            options?: {
+                imageId?: string;
+                kind?: ChatMessage["kind"];
+                streaming?: boolean;
+                fullWidth?: boolean;
+            },
         ) {
-            chatMessages.value.push({
+            const message: ChatMessage = {
                 id: String(nextMsgId++),
                 role,
                 content,
-                imageId,
+                kind: options?.kind ?? "default",
+                imageId: options?.imageId,
+                streaming: options?.streaming ?? false,
+                fullWidth: options?.fullWidth ?? false,
                 timestamp: new Date(),
+            };
+
+            chatMessages.value.push(message);
+            return message.id;
+        }
+
+        function startAiResponseStream() {
+            aiRequestStatus.value = "streaming";
+
+            const messageId = addChatMessage("assistant", "", {
+                kind: "ai",
+                streaming: true,
+                fullWidth: true,
             });
+
+            activeAiMessageId.value = messageId;
+            return messageId;
+        }
+
+        function appendAiResponseChunk(delta: string) {
+            if (!activeAiMessageId.value) return;
+
+            const message = chatMessages.value.find(
+                (entry) => entry.id === activeAiMessageId.value,
+            );
+
+            if (!message) return;
+
+            message.content += delta;
+        }
+
+        function finishAiResponseStream() {
+            if (activeAiMessageId.value) {
+                const message = chatMessages.value.find(
+                    (entry) => entry.id === activeAiMessageId.value,
+                );
+
+                if (message) {
+                    message.streaming = false;
+                }
+            }
+
+            activeAiMessageId.value = null;
+            aiRequestStatus.value = "idle";
+        }
+
+        function failAiResponseStream() {
+            finishAiResponseStream();
+        }
+
+        function clearScreenshots() {
+            screenshots.value = [];
         }
 
         function reset() {
@@ -58,6 +119,8 @@ export const useRoomStore = defineStore(
             desktopConnected.value = false;
             screenshots.value = [];
             chatMessages.value = [];
+            aiRequestStatus.value = "idle";
+            activeAiMessageId.value = null;
         }
 
         return {
@@ -66,12 +129,18 @@ export const useRoomStore = defineStore(
             desktopConnected,
             screenshots,
             chatMessages,
+            aiRequestStatus,
             setRoomCode,
             setServerConnected,
             setDesktopConnected,
             addScreenshot,
             removeScreenshot,
             addChatMessage,
+            startAiResponseStream,
+            appendAiResponseChunk,
+            finishAiResponseStream,
+            failAiResponseStream,
+            clearScreenshots,
             reset,
         };
     },

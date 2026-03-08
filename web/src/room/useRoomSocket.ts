@@ -9,6 +9,7 @@ interface ServerMessage {
     message?: string;
     id?: string;
     data?: string;
+    delta?: string;
 }
 
 export function useRoomSocket() {
@@ -89,12 +90,29 @@ export function useRoomSocket() {
                     store.addChatMessage(
                         "assistant",
                         `Screenshot captured — saved as ${data.id}.`,
-                        data.id,
+                        {
+                            imageId: data.id,
+                            kind: "screenshot",
+                        },
                     );
                 }
                 break;
 
+            case "ai_chat_chunk":
+                if (typeof data.delta === "string") {
+                    store.appendAiResponseChunk(data.delta);
+                }
+                break;
+
+            case "ai_chat_done":
+                store.finishAiResponseStream();
+                break;
+
             case "error":
+                if (store.aiRequestStatus === "streaming") {
+                    store.failAiResponseStream();
+                }
+
                 if (data.message?.includes("not found") || data.message?.includes("expired")) {
                     disconnect();
                     connectFresh();
@@ -205,8 +223,52 @@ export function useRoomSocket() {
             return;
         }
 
+        if (store.aiRequestStatus === "streaming") {
+            error.value = "Wait for the current AI response to finish";
+            return;
+        }
+
         ws.send(JSON.stringify({ type: "request_screenshot" }));
         store.addChatMessage("user", "Take screenshot");
+    }
+
+    function requestAiResponse({
+        model,
+        prompt,
+        screenshotIds,
+        label,
+    }: {
+        model: string;
+        prompt: string;
+        screenshotIds: string[];
+        label: string;
+    }) {
+        if (!ws || ws.readyState !== WebSocket.OPEN) {
+            error.value = "Not connected to server";
+            return false;
+        }
+
+        if (store.aiRequestStatus === "streaming") {
+            error.value = "Wait for the current AI response to finish";
+            return false;
+        }
+
+        error.value = null;
+
+        ws.send(
+            JSON.stringify({
+                type: "ai_chat",
+                model,
+                prompt,
+                screenshot_ids: screenshotIds,
+            }),
+        );
+
+        store.addChatMessage("user", label);
+        store.startAiResponseStream();
+        store.clearScreenshots();
+
+        return true;
     }
 
     function disconnect() {
@@ -227,5 +289,5 @@ export function useRoomSocket() {
         disconnect();
     });
 
-    return { error, connect, disconnect, requestScreenshot };
+    return { error, connect, disconnect, requestScreenshot, requestAiResponse };
 }

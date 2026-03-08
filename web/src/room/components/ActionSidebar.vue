@@ -1,5 +1,11 @@
 <script setup lang="ts">
-import { Camera, Images, Sparkles, Cog, RefreshCcw } from "lucide-vue-next";
+import {
+  Camera,
+  MessageSquareCheck,
+  MessageSquareCode,
+  Cog,
+  RefreshCcw,
+} from "lucide-vue-next";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import {
@@ -11,13 +17,14 @@ import {
 
 defineProps<{
   screenshotDisabled?: boolean;
+  aiSubmitDisabled?: boolean;
   serverConnected?: boolean;
 }>();
 
 defineEmits<{
   screenshot: [];
-  toggleImages: [];
-  askAi: [];
+  submitMcq: [];
+  submitCode: [];
   settings: [];
   reconnect: [];
 }>();
@@ -53,17 +60,16 @@ defineEmits<{
             variant="ghost"
             size="icon"
             class="text-card-foreground"
-            @click="$emit('toggleImages')"
+            :disabled="aiSubmitDisabled"
+            @click="$emit('submitMcq')"
           >
-            <Images class="size-5" />
+            <MessageSquareCheck class="size-5" />
           </Button>
         </TooltipTrigger>
         <TooltipContent side="right">
-          <p>Screenshots</p>
+          <p>Submit MCQ question</p>
         </TooltipContent>
       </Tooltip>
-
-      <Separator class="mx-2 w-6" />
 
       <Tooltip>
         <TooltipTrigger as-child>
@@ -71,13 +77,14 @@ defineEmits<{
             variant="ghost"
             size="icon"
             class="text-card-foreground"
-            @click="$emit('askAi')"
+            :disabled="aiSubmitDisabled"
+            @click="$emit('submitCode')"
           >
-            <Sparkles class="size-5" />
+            <MessageSquareCode class="size-5" />
           </Button>
         </TooltipTrigger>
         <TooltipContent side="right">
-          <p>Ask AI</p>
+          <p>Submit code question</p>
         </TooltipContent>
       </Tooltip>
 

@@ -12,12 +12,14 @@ defineProps<{
   serverConnected: boolean;
   desktopConnected: boolean;
   screenshotDisabled?: boolean;
+  aiSubmitDisabled?: boolean;
 }>();
 
 defineEmits<{
   screenshot: [];
   toggleImages: [];
-  askAi: [];
+  submitMcq: [];
+  submitCode: [];
   settings: [];
   reconnect: [];
   selectImage: [id: string];
@@ -29,10 +31,11 @@ defineEmits<{
   <div class="flex h-dvh w-full overflow-hidden bg-background">
     <ActionSidebar
       :screenshot-disabled="screenshotDisabled"
+      :ai-submit-disabled="aiSubmitDisabled"
       :server-connected="serverConnected"
       @screenshot="$emit('screenshot')"
-      @toggle-images="$emit('toggleImages')"
-      @ask-ai="$emit('askAi')"
+      @submit-mcq="$emit('submitMcq')"
+      @submit-code="$emit('submitCode')"
       @settings="$emit('settings')"
       @reconnect="$emit('reconnect')"
     />

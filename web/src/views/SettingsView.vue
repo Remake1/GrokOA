@@ -5,9 +5,11 @@ import { ArrowLeft, Save } from "lucide-vue-next";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
+import AiModelSelector from "@/settings/components/AiModelSelector.vue";
 import LanguageSelector from "@/settings/components/LanguageSelector.vue";
 import PromptEditor from "@/settings/components/PromptEditor.vue";
 import {
+    AI_MODEL_OPTIONS,
     useSettingsStore,
     LANGUAGE_OPTIONS,
     DEFAULT_CODING_PROMPT,
@@ -19,18 +21,21 @@ const settings = useSettingsStore();
 
 // Local draft state — only committed on save
 const draftLanguage = ref(settings.codingLanguage);
+const draftAiModel = ref(settings.aiModel);
 const draftCodingPrompt = ref(settings.codingPrompt);
 const draftMcqPrompt = ref(settings.mcqPrompt);
 
 const hasChanges = computed(
     () =>
         draftLanguage.value !== settings.codingLanguage ||
+        draftAiModel.value !== settings.aiModel ||
         draftCodingPrompt.value !== settings.codingPrompt ||
         draftMcqPrompt.value !== settings.mcqPrompt,
 );
 
 function save() {
     settings.codingLanguage = draftLanguage.value;
+    settings.aiModel = draftAiModel.value;
     settings.codingPrompt = draftCodingPrompt.value;
     settings.mcqPrompt = draftMcqPrompt.value;
 }
@@ -57,6 +62,13 @@ function save() {
                 <LanguageSelector
                     v-model="draftLanguage"
                     :options="LANGUAGE_OPTIONS"
+                />
+
+                <Separator />
+
+                <AiModelSelector
+                    v-model="draftAiModel"
+                    :options="AI_MODEL_OPTIONS"
                 />
 
                 <Separator />

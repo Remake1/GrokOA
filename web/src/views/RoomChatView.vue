@@ -5,19 +5,51 @@ import RoomLayout from "@/room/components/RoomLayout.vue";
 import SettingsModal from "@/room/components/SettingsModal.vue";
 import { useRoomStore } from "@/room/store";
 import { useRoomSocket } from "@/room/useRoomSocket";
+import { useSettingsStore } from "@/settings/store";
 
 const route = useRoute();
 const store = useRoomStore();
+const settings = useSettingsStore();
 const roomCode = computed(() => store.roomCode ?? (route.params.roomId as string));
-const { error, connect, disconnect, requestScreenshot } = useRoomSocket();
+const { error, connect, disconnect, requestScreenshot, requestAiResponse } = useRoomSocket();
 
 const MAX_SCREENSHOTS = 5;
 const showImagePanel = ref(true);
 const showSettings = ref(false);
-const screenshotDisabled = computed(() => store.screenshots.length >= MAX_SCREENSHOTS);
+const aiStreaming = computed(() => store.aiRequestStatus === "streaming");
+const screenshotDisabled = computed(
+  () => store.screenshots.length >= MAX_SCREENSHOTS || aiStreaming.value,
+);
+const aiSubmitDisabled = computed(
+  () =>
+    !store.serverConnected ||
+    aiStreaming.value ||
+    store.screenshots.length === 0,
+);
 
 function toggleImagePanel() {
   showImagePanel.value = !showImagePanel.value;
+}
+
+function submitAiQuestion(prompt: string, label: string) {
+  const submitted = requestAiResponse({
+    model: settings.aiModel,
+    prompt,
+    screenshotIds: store.screenshots.map((image) => image.id),
+    label,
+  });
+
+  if (submitted) {
+    showImagePanel.value = false;
+  }
+}
+
+function submitMcqQuestion() {
+  submitAiQuestion(settings.mcqPrompt, "Submit MCQ question");
+}
+
+function submitCodeQuestion() {
+  submitAiQuestion(settings.finalCodingPrompt, "Submit code question");
 }
 
 // Auto-expand panel when a new screenshot arrives
@@ -44,9 +76,11 @@ onMounted(() => {
     :server-connected="store.serverConnected"
     :desktop-connected="store.desktopConnected"
     :screenshot-disabled="screenshotDisabled"
+    :ai-submit-disabled="aiSubmitDisabled"
     @screenshot="requestScreenshot"
     @toggle-images="toggleImagePanel"
-    @ask-ai="() => {}"
+    @submit-mcq="submitMcqQuestion"
+    @submit-code="submitCodeQuestion"
     @settings="showSettings = true"
     @reconnect="connect"
     @select-image="() => {}"

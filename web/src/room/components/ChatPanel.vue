@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, nextTick, watch } from "vue";
+import { computed, ref, nextTick, watch } from "vue";
 import { Database, ScreenShare } from "lucide-vue-next";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import type { ChatMessage } from "@/room/types";
@@ -12,9 +12,14 @@ const props = defineProps<{
 }>();
 
 const scrollRef = ref<InstanceType<typeof ScrollArea> | null>(null);
+const messageSignature = computed(() =>
+  props.messages
+    .map((msg) => `${msg.id}:${msg.content.length}:${msg.streaming ? 1 : 0}`)
+    .join("|"),
+);
 
 watch(
-  () => props.messages.length,
+  messageSignature,
   async () => {
     await nextTick();
     const viewport = scrollRef.value?.$el?.querySelector(
@@ -70,18 +75,19 @@ function formatTime(date: Date | string): string {
           :class="msg.role === 'user' ? 'justify-end' : 'justify-start'"
         >
           <div
-            class="max-w-[75%] rounded-lg px-3 py-2"
+            class="rounded-lg px-3 py-2"
             :class="
-              msg.role === 'user'
-                ? 'bg-primary text-primary-foreground'
-                : 'bg-muted text-foreground'
+              msg.kind === 'ai'
+                ? 'w-full bg-muted text-foreground'
+                : msg.role === 'user'
+                  ? 'max-w-[75%] bg-primary text-primary-foreground'
+                  : 'max-w-[75%] bg-muted text-foreground'
             "
           >
             <p class="text-sm leading-relaxed whitespace-pre-wrap">{{ msg.content }}</p>
-            <span
-              class="mt-1 block text-[10px] opacity-60"
-            >
+            <span class="mt-1 block text-[10px] opacity-60">
               {{ formatTime(msg.timestamp) }}
+              <span v-if="msg.streaming"> · Streaming</span>
             </span>
           </div>
         </div>
@@ -89,4 +95,3 @@ function formatTime(date: Date | string): string {
     </ScrollArea>
   </div>
 </template>
-

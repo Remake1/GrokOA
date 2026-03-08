@@ -12,10 +12,12 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
+import AiModelSelector from "@/settings/components/AiModelSelector.vue";
 import LanguageSelector from "@/settings/components/LanguageSelector.vue";
 import PromptEditor from "@/settings/components/PromptEditor.vue";
 import {
   useSettingsStore,
+  AI_MODEL_OPTIONS,
   LANGUAGE_OPTIONS,
   DEFAULT_CODING_PROMPT,
   DEFAULT_MCQ_PROMPT,
@@ -108,6 +110,13 @@ function logoutUser() {
           class="flex-1 overflow-y-auto px-5 py-4"
         >
           <div class="flex flex-col gap-4">
+            <AiModelSelector
+              v-model="settings.aiModel"
+              :options="AI_MODEL_OPTIONS"
+            />
+
+            <Separator />
+
             <div>
               <h3 class="mb-1 text-sm font-medium">Exit Session</h3>
               <p class="mb-3 text-xs text-muted-foreground">
