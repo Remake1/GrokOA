@@ -20,3 +20,16 @@ screenshot:
 
 room:
   grace_period: "5m"
+
+ai:
+  openai:
+    models:
+      - "gpt-5.3-codex"
+      - "gpt-5.4-2026-03-05"
+      - "gpt-5.1-codex-mini"
+      - "gpt-5-mini-2025-08-07"
+  gemini:
+    models:
+      - "gemini-3-flash-preview"
+      - "gemini-3.1-pro-preview"
+      - "gemini-3.1-flash-lite-preview"

@@ -4,10 +4,12 @@ import (
 	"context"
 	"encoding/base64"
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"time"
 
 	"api/internal/dto"
+	aiservice "api/internal/service/ai"
 	roomservice "api/internal/service/room"
 	screenshotservice "api/internal/service/screenshot"
 
@@ -22,6 +24,7 @@ type tokenValidator interface {
 type RoomHandler struct {
 	rooms       *roomservice.Manager
 	screenshots *screenshotservice.Service
+	aiRegistry  *aiservice.Registry
 	auth        tokenValidator
 	logger      zerolog.Logger
 }
@@ -29,12 +32,14 @@ type RoomHandler struct {
 func NewRoomHandler(
 	rooms *roomservice.Manager,
 	screenshots *screenshotservice.Service,
+	aiRegistry *aiservice.Registry,
 	auth tokenValidator,
 	logger zerolog.Logger,
 ) *RoomHandler {
 	return &RoomHandler{
 		rooms:       rooms,
 		screenshots: screenshots,
+		aiRegistry:  aiRegistry,
 		auth:        auth,
 		logger:      logger,
 	}
@@ -233,6 +238,8 @@ func (h *RoomHandler) readWebClient(ctx context.Context, conn *websocket.Conn, r
 			if err := writeWSJSON(ctx, desktopConn, dto.SimpleMsg{Type: "take_screenshot"}); err != nil {
 				_ = writeWSJSON(ctx, conn, dto.SimpleMsg{Type: "error", Message: "failed to reach desktop"})
 			}
+		case "ai_chat":
+			h.handleAIChat(ctx, data, conn, room)
 		case "close_room":
 			h.rooms.DeleteRoom(room.Code)
 			h.logger.Info().Str("room", room.Code).Msg("room closed by client")
@@ -310,6 +317,63 @@ func (h *RoomHandler) handleScreenshotData(ctx context.Context, data []byte, roo
 		ID:   id,
 		Data: msg.Data,
 	})
+}
+
+// --- AI Chat ---
+
+func (h *RoomHandler) handleAIChat(ctx context.Context, data []byte, conn *websocket.Conn, room *roomservice.Room) {
+	var msg dto.AIChatRequestMsg
+	if err := json.Unmarshal(data, &msg); err != nil {
+		_ = writeWSJSON(ctx, conn, dto.SimpleMsg{Type: "error", Message: "invalid ai_chat payload"})
+
+		return
+	}
+
+	if msg.Model == "" || msg.Prompt == "" {
+		_ = writeWSJSON(ctx, conn, dto.SimpleMsg{Type: "error", Message: "model and prompt are required"})
+
+		return
+	}
+
+	provider, providerName, err := h.aiRegistry.Resolve(msg.Model)
+	if err != nil {
+		_ = writeWSJSON(ctx, conn, dto.SimpleMsg{Type: "error", Message: fmt.Sprintf("resolve model: %v", err)})
+
+		return
+	}
+
+	imagePaths := make([]string, 0, len(msg.ScreenshotIDs))
+	for _, id := range msg.ScreenshotIDs {
+		imagePaths = append(imagePaths, h.screenshots.Path(id))
+	}
+
+	h.logger.Info().
+		Str("room", room.Code).
+		Str("provider", string(providerName)).
+		Str("model", msg.Model).
+		Int("images", len(imagePaths)).
+		Msg("starting ai chat stream")
+
+	request := aiservice.ChatRequest{
+		Model:      msg.Model,
+		Prompt:     msg.Prompt,
+		ImagePaths: imagePaths,
+	}
+
+	streamErr := provider.StreamChat(ctx, request, func(delta string) error {
+		return writeWSJSON(ctx, conn, dto.AIChatChunkMsg{Type: "ai_chat_chunk", Delta: delta})
+	})
+
+	if streamErr != nil {
+		h.logger.Error().Err(streamErr).Str("room", room.Code).Msg("ai chat stream failed")
+		_ = writeWSJSON(ctx, conn, dto.SimpleMsg{Type: "error", Message: fmt.Sprintf("ai stream failed: %v", streamErr)})
+
+		return
+	}
+
+	_ = writeWSJSON(ctx, conn, dto.AIChatDoneMsg{Type: "ai_chat_done"})
+
+	h.logger.Info().Str("room", room.Code).Msg("ai chat stream completed")
 }
 
 // --- Helpers ---

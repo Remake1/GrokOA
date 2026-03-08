@@ -23,6 +23,7 @@ type Config struct {
 	Auth       Auth       `yaml:"auth"`
 	Screenshot Screenshot `yaml:"screenshot"`
 	Room       Room       `yaml:"room"`
+	AI         AI         `yaml:"ai"`
 }
 
 type HTTP struct {
@@ -53,6 +54,21 @@ type Screenshot struct {
 
 type Room struct {
 	GracePeriod time.Duration `yaml:"grace_period" env:"ROOM_GRACE_PERIOD" env-default:"30s"`
+}
+
+type AI struct {
+	OpenAI OpenAI `yaml:"openai"`
+	Gemini Gemini `yaml:"gemini"`
+}
+
+type OpenAI struct {
+	APIKey string   `yaml:"-" env:"OPENAI_API_KEY"`
+	Models []string `yaml:"models"`
+}
+
+type Gemini struct {
+	APIKey string   `yaml:"-" env:"GEMINI_API_KEY"`
+	Models []string `yaml:"models"`
 }
 
 func (h HTTP) Address() string {

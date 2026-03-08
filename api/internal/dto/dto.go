@@ -51,3 +51,22 @@ type SimpleMsg struct {
 	Type    string `json:"type"`
 	Message string `json:"message,omitempty"`
 }
+
+// AIChatRequestMsg is sent by the web client to start an AI chat stream.
+type AIChatRequestMsg struct {
+	Type          string   `json:"type"`
+	Model         string   `json:"model"`
+	Prompt        string   `json:"prompt"`
+	ScreenshotIDs []string `json:"screenshot_ids"`
+}
+
+// AIChatChunkMsg is sent to the web client for each streamed AI response chunk.
+type AIChatChunkMsg struct {
+	Type  string `json:"type"`
+	Delta string `json:"delta"`
+}
+
+// AIChatDoneMsg is sent to the web client when the AI stream finishes.
+type AIChatDoneMsg struct {
+	Type string `json:"type"`
+}

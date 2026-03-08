@@ -39,6 +39,12 @@ channels:
         $ref: '#/components/messages/screenshot'
       requestScreenshot:
         $ref: '#/components/messages/requestScreenshot'
+      aiChatRequest:
+        $ref: '#/components/messages/aiChatRequest'
+      aiChatChunk:
+        $ref: '#/components/messages/aiChatChunk'
+      aiChatDone:
+        $ref: '#/components/messages/aiChatDone'
       error:
         $ref: '#/components/messages/error'
 
@@ -93,6 +99,22 @@ operations:
     messages:
       - $ref: '#/channels/clientChannel/messages/screenshot'
 
+  sendAIChatChunk:
+    action: send
+    channel:
+      $ref: '#/channels/clientChannel'
+    summary: Server streams an AI response delta to the web client
+    messages:
+      - $ref: '#/channels/clientChannel/messages/aiChatChunk'
+
+  sendAIChatDone:
+    action: send
+    channel:
+      $ref: '#/channels/clientChannel'
+    summary: Server signals that the AI response stream is complete
+    messages:
+      - $ref: '#/channels/clientChannel/messages/aiChatDone'
+
   sendErrorToClient:
     action: send
     channel:
@@ -109,6 +131,14 @@ operations:
     summary: Web client requests a screenshot from the desktop
     messages:
       - $ref: '#/channels/clientChannel/messages/requestScreenshot'
+
+  receiveAIChatRequest:
+    action: receive
+    channel:
+      $ref: '#/channels/clientChannel'
+    summary: Web client sends a prompt to start an AI chat stream
+    messages:
+      - $ref: '#/channels/clientChannel/messages/aiChatRequest'
 
   # --- Server sends TO desktop ---
   sendTakeScreenshot:
@@ -187,6 +217,27 @@ components:
       payload:
         $ref: '#/components/schemas/ScreenshotPayload'
 
+    aiChatRequest:
+      name: aiChatRequest
+      title: AI Chat Request
+      summary: Sent by web client to start an AI chat stream
+      payload:
+        $ref: '#/components/schemas/AIChatRequestPayload'
+
+    aiChatChunk:
+      name: aiChatChunk
+      title: AI Chat Chunk
+      summary: Streamed AI response delta sent to web client
+      payload:
+        $ref: '#/components/schemas/AIChatChunkPayload'
+
+    aiChatDone:
+      name: aiChatDone
+      title: AI Chat Done
+      summary: Sent to web client when the AI response stream is complete
+      payload:
+        $ref: '#/components/schemas/AIChatDonePayload'
+
     error:
       name: error
       title: Error
@@ -248,6 +299,49 @@ components:
           type: string
           format: byte
           description: Base64-encoded PNG screenshot
+
+    AIChatRequestPayload:
+      type: object
+      required: [type, model, prompt]
+      properties:
+        type:
+          type: string
+          const: ai_chat
+        model:
+          type: string
+          description: AI model identifier (e.g. gpt-5.3-codex, gemini-3-flash-preview)
+          examples:
+            - "gemini-3-flash-preview"
+            - "gpt-5.3-codex"
+        prompt:
+          type: string
+          description: User prompt / question text
+        screenshot_ids:
+          type: array
+          items:
+            type: string
+          description: Optional array of screenshot IDs to include as images
+          examples:
+            - ["a1b2c3d4", "e5f6a7b8"]
+
+    AIChatChunkPayload:
+      type: object
+      required: [type, delta]
+      properties:
+        type:
+          type: string
+          const: ai_chat_chunk
+        delta:
+          type: string
+          description: Partial text chunk from the AI response
+
+    AIChatDonePayload:
+      type: object
+      required: [type]
+      properties:
+        type:
+          type: string
+          const: ai_chat_done
 
     ErrorPayload:
       type: object

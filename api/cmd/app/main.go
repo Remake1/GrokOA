@@ -8,10 +8,14 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
+	"strings"
 	"syscall"
 
 	httpcontroller "api/internal/controller/http"
+	geminirepository "api/internal/repository/ai/gemini"
+	openairepository "api/internal/repository/ai/openai"
 	healthrepository "api/internal/repository/health"
+	aiservice "api/internal/service/ai"
 	authservice "api/internal/service/auth"
 	healthservice "api/internal/service/health"
 	roomservice "api/internal/service/room"
@@ -50,7 +54,43 @@ func main() {
 		log.Fatalf("init screenshot service: %v", err)
 	}
 
-	roomHandler := httpcontroller.NewRoomHandler(roomManager, screenshotSvc, authSvc, logger)
+	if strings.TrimSpace(cfg.AI.OpenAI.APIKey) == "" {
+		logger.Warn().Msg("OPENAI_API_KEY is empty, OpenAI provider is disabled")
+	} else {
+		openaiRepo, repoErr := openairepository.NewRepository(cfg.AI.OpenAI.APIKey)
+		if repoErr != nil {
+			log.Fatalf("init openai repository: %v", repoErr)
+		}
+
+		if registerErr := aiservice.GlobalRegistry.Register(aiservice.ProviderOpenAI, openaiRepo, cfg.AI.OpenAI.Models); registerErr != nil {
+			log.Fatalf("register openai provider: %v", registerErr)
+		}
+
+		logger.Info().
+			Str("provider", string(aiservice.ProviderOpenAI)).
+			Int("models_count", len(cfg.AI.OpenAI.Models)).
+			Msg("ai provider registered")
+	}
+
+	if strings.TrimSpace(cfg.AI.Gemini.APIKey) == "" {
+		logger.Warn().Msg("GEMINI_API_KEY is empty, Gemini provider is disabled")
+	} else {
+		geminiRepo, repoErr := geminirepository.NewRepository(context.Background(), cfg.AI.Gemini.APIKey)
+		if repoErr != nil {
+			log.Fatalf("init gemini repository: %v", repoErr)
+		}
+
+		if registerErr := aiservice.GlobalRegistry.Register(aiservice.ProviderGemini, geminiRepo, cfg.AI.Gemini.Models); registerErr != nil {
+			log.Fatalf("register gemini provider: %v", registerErr)
+		}
+
+		logger.Info().
+			Str("provider", string(aiservice.ProviderGemini)).
+			Int("models_count", len(cfg.AI.Gemini.Models)).
+			Msg("ai provider registered")
+	}
+
+	roomHandler := httpcontroller.NewRoomHandler(roomManager, screenshotSvc, aiservice.GlobalRegistry, authSvc, logger)
 	router := httpcontroller.NewRouter(healthHandler, authHandler, roomHandler, logger)
 
 	server := httpserver.New(httpserver.Config{
