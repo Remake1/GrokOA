@@ -82,6 +82,36 @@ test.describe("Room Setup", () => {
         await expect(page.getByText(ROOM_CODE, { exact: true })).toBeVisible();
     });
 
+    test("desktop_connected keeps the existing room websocket and room code", async ({
+        page,
+    }) => {
+        const wsRoutes: WebSocketRoute[] = [];
+        await page.routeWebSocket(WS_URL_PATTERN, (ws) => {
+            wsRoutes.push(ws);
+        });
+
+        await page.goto("/room/setup");
+
+        await expect(async () => {
+            expect(wsRoutes.length).toBe(1);
+        }).toPass({ timeout: 5000 });
+
+        const ws = wsRoutes[0]!;
+        ws.send(JSON.stringify({ type: "room_created", code: ROOM_CODE }));
+        ws.send(JSON.stringify({ type: "desktop_connected" }));
+
+        await expect(page).toHaveURL(`/room/${ROOM_CODE}`);
+        await expect(page.getByText(ROOM_CODE, { exact: true })).toBeVisible();
+
+        await expect(async () => {
+            expect(wsRoutes.length).toBe(1);
+        }).toPass({ timeout: 1000 });
+
+        const stored = await page.evaluate(() => localStorage.getItem("room"));
+        const parsed = JSON.parse(stored!);
+        expect(parsed.roomCode).toBe(ROOM_CODE);
+    });
+
     test("desktop_disconnected updates status on setup page", async ({ page }) => {
         const { waitForConnection } = await mockWs(page);
 

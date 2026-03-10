@@ -1,7 +1,7 @@
-import { ref, onUnmounted } from "vue";
-import { useRouter } from "vue-router";
+import { ref } from "vue";
 import { useRoomStore } from "./store";
 import { getToken } from "@/auth/cookies";
+import router from "@/router";
 
 interface ServerMessage {
     type: string;
@@ -12,16 +12,15 @@ interface ServerMessage {
     delta?: string;
 }
 
+const error = ref<string | null>(null);
+let ws: WebSocket | null = null;
+let manualDisconnect = false;
+let reconnectTimer: ReturnType<typeof setTimeout> | null = null;
+let reconnectDelay = 1000;
+const MAX_RECONNECT_DELAY = 10000;
+
 export function useRoomSocket() {
     const store = useRoomStore();
-    const router = useRouter();
-    const error = ref<string | null>(null);
-
-    let ws: WebSocket | null = null;
-    let manualDisconnect = false;
-    let reconnectTimer: ReturnType<typeof setTimeout> | null = null;
-    let reconnectDelay = 1000;
-    const MAX_RECONNECT_DELAY = 10000;
 
     function getPersistedRoomCode(): string | null {
         if (store.roomCode) return store.roomCode;
@@ -186,12 +185,17 @@ export function useRoomSocket() {
     }
 
     function connect() {
-        if (ws) {
-            disconnect();
-        }
-
         manualDisconnect = false;
         error.value = null;
+
+        if (ws?.readyState === WebSocket.OPEN || ws?.readyState === WebSocket.CONNECTING) {
+            return;
+        }
+
+        if (ws) {
+            ws.close();
+            ws = null;
+        }
 
         try {
             const existingCode = getPersistedRoomCode();
@@ -284,10 +288,6 @@ export function useRoomSocket() {
             ws = null;
         }
     }
-
-    onUnmounted(() => {
-        disconnect();
-    });
 
     return { error, connect, disconnect, requestScreenshot, requestAiResponse };
 }
