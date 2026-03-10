@@ -30,10 +30,7 @@ const SHIKI_LANGUAGES = [
   "java",
 ] as const;
 
-const SHIKI_THEMES = {
-  light: "github-light",
-  dark: "github-dark",
-} as const;
+const SHIKI_THEME = "github-dark" as const;
 
 interface AiMessageRenderer {
   render(markdown: string): Promise<string>;
@@ -74,7 +71,7 @@ async function createAiMessageRenderer(): Promise<AiMessageRenderer> {
   };
 
   const highlighterPromise = createHighlighter({
-    themes: Object.values(SHIKI_THEMES),
+    themes: [SHIKI_THEME],
     langs: [...SHIKI_LANGUAGES],
   });
 
@@ -82,10 +79,13 @@ async function createAiMessageRenderer(): Promise<AiMessageRenderer> {
     markdown,
     async (code, options) => {
       const highlighter = await highlighterPromise;
-      return highlighter.codeToHtml(code, options);
+      return highlighter.codeToHtml(code, {
+        ...options,
+        theme: SHIKI_THEME,
+      });
     },
     {
-      themes: SHIKI_THEMES,
+      theme: SHIKI_THEME,
     },
   );
 

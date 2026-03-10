@@ -233,21 +233,12 @@ async function updateRenderedAiMessages(): Promise<void> {
   line-height: 1.6;
 }
 
-.chat-markdown :deep(.shiki) {
+.chat-markdown :deep(pre.shiki) {
   margin: 0;
   min-width: 100%;
-  background-color: var(--shiki-light-bg) !important;
 }
 
-.chat-markdown :deep(.shiki span) {
-  color: var(--shiki-light) !important;
-}
-
-:global(.dark) .chat-markdown :deep(.shiki) {
-  background-color: var(--shiki-dark-bg) !important;
-}
-
-:global(.dark) .chat-markdown :deep(.shiki span) {
-  color: var(--shiki-dark) !important;
+.chat-markdown :deep(pre.shiki code) {
+  background: transparent;
 }
 </style>
