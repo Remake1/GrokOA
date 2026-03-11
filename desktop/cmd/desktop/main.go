@@ -3,6 +3,7 @@ package main
 import (
 	"log"
 	"os"
+	"sync/atomic"
 
 	"crackoa/desktop/internal/capture"
 	"crackoa/desktop/internal/stealth"
@@ -34,6 +35,7 @@ func main() {
 
 		client := ws.NewClient(serverURL)
 		appUI := ui.NewUI(serverURL)
+		var permissionPrimed atomic.Bool
 
 		// Wire logging: WS events → log window + redraw.
 		client.OnLog = func(msg string) {
@@ -64,6 +66,14 @@ func main() {
 		// Wire connection state changes → UI.
 		client.OnConnStateChange = func(connected bool) {
 			if connected {
+				if permissionPrimed.CompareAndSwap(false, true) {
+					go func() {
+						if err := capture.PrimeScreenRecordingPermission(); err != nil {
+							appUI.AddLog("Screen recording permission check failed: " + err.Error())
+							window.Invalidate()
+						}
+					}()
+				}
 				appUI.SetConnected(true, "")
 			} else {
 				appUI.SetConnected(false, "")
@@ -74,6 +84,7 @@ func main() {
 		// Wire UI connect button → WS connect (blocks, auto-reconnects).
 		appUI.OnConnect = func(code string, host string) {
 			go func() {
+				permissionPrimed.Store(false)
 				client.SetServerURL(host)
 				appUI.AddLog("Using server host: " + host)
 				appUI.SetConnected(true, code)
