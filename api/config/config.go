@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"net"
 	"os"
+	"strings"
 	"time"
 
 	"github.com/ilyakaznacheev/cleanenv"
@@ -91,6 +92,15 @@ func Load() (Config, error) {
 		return Config{}, fmt.Errorf("load dotenv from %q: %w", dotenvPath, err)
 	}
 
+	if err := populateSecretEnv(
+		"ACCESS_KEY",
+		"JWT_SECRET",
+		"OPENAI_API_KEY",
+		"GEMINI_API_KEY",
+	); err != nil {
+		return Config{}, err
+	}
+
 	configPath := os.Getenv("CONFIG_PATH")
 	if configPath == "" {
 		configPath = defaultConfigPath
@@ -114,4 +124,28 @@ func Load() (Config, error) {
 	}
 
 	return cfg, nil
+}
+
+func populateSecretEnv(keys ...string) error {
+	for _, key := range keys {
+		if strings.TrimSpace(os.Getenv(key)) != "" {
+			continue
+		}
+
+		filePath := strings.TrimSpace(os.Getenv(key + "_FILE"))
+		if filePath == "" {
+			continue
+		}
+
+		value, err := os.ReadFile(filePath)
+		if err != nil {
+			return fmt.Errorf("read %s from %q: %w", key, filePath, err)
+		}
+
+		if err := os.Setenv(key, strings.TrimSpace(string(value))); err != nil {
+			return fmt.Errorf("set %s from file: %w", key, err)
+		}
+	}
+
+	return nil
 }
