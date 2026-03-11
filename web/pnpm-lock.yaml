@@ -17,9 +17,15 @@ importers:
       '@fontsource-variable/open-sans':
         specifier: ^5.2.7
         version: 5.2.7
+      '@shikijs/langs':
+        specifier: ^4.0.2
+        version: 4.0.2
       '@shikijs/markdown-it':
         specifier: ^4.0.2
         version: 4.0.2(markdown-it-async@2.2.0)
+      '@shikijs/themes':
+        specifier: ^4.0.2
+        version: 4.0.2
       '@tailwindcss/vite':
         specifier: ^4.2.1
         version: 4.2.1(vite@7.3.1(@types/node@24.11.0)(jiti@2.6.1)(lightningcss@1.31.1))
