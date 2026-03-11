@@ -19,6 +19,10 @@ func NewService(storageDir string) (*Service, error) {
 		return nil, fmt.Errorf("create screenshots dir: %w", err)
 	}
 
+	if err := cleanDir(storageDir); err != nil {
+		return nil, fmt.Errorf("clean screenshots dir: %w", err)
+	}
+
 	return &Service{storageDir: storageDir}, nil
 }
 
@@ -39,6 +43,21 @@ func (s *Service) Save(data []byte) (string, error) {
 
 func (s *Service) Path(id string) string {
 	return filepath.Join(s.storageDir, id+".png")
+}
+
+func cleanDir(dir string) error {
+	entries, err := os.ReadDir(dir)
+	if err != nil {
+		return err
+	}
+
+	for _, entry := range entries {
+		if err := os.RemoveAll(filepath.Join(dir, entry.Name())); err != nil {
+			return err
+		}
+	}
+
+	return nil
 }
 
 func generateID() (string, error) {
