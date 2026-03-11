@@ -1,0 +1,29 @@
+services:
+  nginx:
+    image: nginx:1.27-alpine
+    depends_on:
+      - web
+      - api
+    ports:
+      - "80:80"
+    volumes:
+      - ./deploy/swarm/nginx.conf:/etc/nginx/conf.d/default.conf:ro
+
+  web:
+    build:
+      context: ./web
+      dockerfile: Dockerfile
+
+  api:
+    build:
+      context: ./api
+      dockerfile: Dockerfile
+    env_file:
+      - ./api/.env
+    environment:
+      CONFIG_PATH: /app/config.yaml
+    volumes:
+      - screenshots:/app/screenshots
+
+volumes:
+  screenshots:
