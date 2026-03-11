@@ -3,6 +3,7 @@ import { ref, computed, watch, onMounted } from "vue";
 import { useRoute } from "vue-router";
 import RoomLayout from "@/room/components/RoomLayout.vue";
 import SettingsModal from "@/room/components/SettingsModal.vue";
+import WakeLock from "@/room/components/WakeLock.vue";
 import { useRoomStore } from "@/room/store";
 import { useRoomSocket } from "@/room/useRoomSocket";
 import { useSettingsStore } from "@/settings/store";
@@ -68,6 +69,8 @@ onMounted(() => {
 </script>
 
 <template>
+  <WakeLock />
+
   <RoomLayout
     :room-code="roomCode"
     :messages="store.chatMessages"
