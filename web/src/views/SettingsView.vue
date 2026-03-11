@@ -9,12 +9,12 @@ import AiModelSelector from "@/settings/components/AiModelSelector.vue";
 import LanguageSelector from "@/settings/components/LanguageSelector.vue";
 import PromptEditor from "@/settings/components/PromptEditor.vue";
 import {
-    AI_MODEL_OPTIONS,
-    useSettingsStore,
-    LANGUAGE_OPTIONS,
-    DEFAULT_CODING_PROMPT,
-    DEFAULT_MCQ_PROMPT,
-} from "@/settings/store";
+  AI_MODEL_OPTIONS,
+  DEFAULT_CODING_PROMPT,
+  DEFAULT_MCQ_PROMPT,
+  LANGUAGE_OPTIONS,
+} from "@/settings/config";
+import { useSettingsStore } from "@/settings/store";
 
 const router = useRouter();
 const settings = useSettingsStore();

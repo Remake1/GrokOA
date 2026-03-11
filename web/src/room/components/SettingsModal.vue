@@ -16,12 +16,12 @@ import AiModelSelector from "@/settings/components/AiModelSelector.vue";
 import LanguageSelector from "@/settings/components/LanguageSelector.vue";
 import PromptEditor from "@/settings/components/PromptEditor.vue";
 import {
-  useSettingsStore,
   AI_MODEL_OPTIONS,
-  LANGUAGE_OPTIONS,
   DEFAULT_CODING_PROMPT,
   DEFAULT_MCQ_PROMPT,
-} from "@/settings/store";
+  LANGUAGE_OPTIONS,
+} from "@/settings/config";
+import { useSettingsStore } from "@/settings/store";
 import { useRoomStore } from "@/room/store";
 import { useAuth } from "@/auth/useAuth";
 
