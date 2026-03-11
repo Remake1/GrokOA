@@ -5,9 +5,12 @@ import (
 	"encoding/json"
 	"errors"
 	"net/http"
+	"time"
 
 	"api/internal/dto"
 	authservice "api/internal/service/auth"
+
+	"github.com/go-chi/httprate"
 )
 
 type authService interface {
@@ -15,11 +18,23 @@ type authService interface {
 }
 
 type AuthHandler struct {
-	service authService
+	service            authService
+	failedLoginLimiter *httprate.RateLimiter
 }
 
-func NewAuthHandler(service authService) *AuthHandler {
-	return &AuthHandler{service: service}
+func NewAuthHandler(service authService, failedAttemptLimit int, failedAttemptWindow time.Duration) *AuthHandler {
+	limiter := httprate.NewRateLimiter(
+		failedAttemptLimit,
+		failedAttemptWindow,
+		httprate.WithLimitHandler(func(w http.ResponseWriter, r *http.Request) {
+			writeJSON(w, http.StatusTooManyRequests, map[string]string{"error": "too many failed login attempts"})
+		}),
+	)
+
+	return &AuthHandler{
+		service:            service,
+		failedLoginLimiter: limiter,
+	}
 }
 
 func (h *AuthHandler) Authorize(w http.ResponseWriter, r *http.Request) {
@@ -38,6 +53,10 @@ func (h *AuthHandler) Authorize(w http.ResponseWriter, r *http.Request) {
 		case errors.Is(err, authservice.ErrEmptyKey):
 			writeJSON(w, http.StatusBadRequest, map[string]string{"error": authservice.ErrEmptyKey.Error()})
 		case errors.Is(err, authservice.ErrWrongKey):
+			if h.respondOnFailedLoginLimit(w, r) {
+				return
+			}
+
 			writeJSON(w, http.StatusUnauthorized, map[string]string{"error": authservice.ErrWrongKey.Error()})
 		default:
 			writeJSON(w, http.StatusInternalServerError, map[string]string{"error": "internal error"})
@@ -47,4 +66,18 @@ func (h *AuthHandler) Authorize(w http.ResponseWriter, r *http.Request) {
 	}
 
 	writeJSON(w, http.StatusOK, map[string]string{"token": token})
+}
+
+func (h *AuthHandler) respondOnFailedLoginLimit(w http.ResponseWriter, r *http.Request) bool {
+	if h.failedLoginLimiter == nil {
+		return false
+	}
+
+	key, err := httprate.KeyByIP(r)
+	if err != nil {
+		writeJSON(w, http.StatusInternalServerError, map[string]string{"error": "internal error"})
+		return true
+	}
+
+	return h.failedLoginLimiter.RespondOnLimit(w, r, key)
 }

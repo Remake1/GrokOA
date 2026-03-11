@@ -44,7 +44,11 @@ func main() {
 	statusService := healthservice.NewService(statusRepo)
 	healthHandler := httpcontroller.NewHealthHandler(statusService)
 	authSvc := authservice.NewService(cfg.Auth.AccessKey, cfg.Auth.JWTSecret, cfg.Auth.TokenTTL)
-	authHandler := httpcontroller.NewAuthHandler(authSvc)
+	authHandler := httpcontroller.NewAuthHandler(
+		authSvc,
+		cfg.Auth.RateLimit.MaxFailedAttempts,
+		cfg.Auth.RateLimit.Window,
+	)
 
 	roomManager := roomservice.NewManager(cfg.Room.GracePeriod)
 	defer roomManager.Stop()

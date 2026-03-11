@@ -46,6 +46,12 @@ type Auth struct {
 	AccessKey string        `yaml:"-" env:"ACCESS_KEY" env-required:"true"`
 	JWTSecret string        `yaml:"-" env:"JWT_SECRET" env-required:"true"`
 	TokenTTL  time.Duration `yaml:"token_ttl"`
+	RateLimit AuthRateLimit `yaml:"rate_limit"`
+}
+
+type AuthRateLimit struct {
+	MaxFailedAttempts int           `yaml:"max_failed_attempts" env:"AUTH_RATE_LIMIT_MAX_FAILED_ATTEMPTS" env-default:"5"`
+	Window            time.Duration `yaml:"window" env:"AUTH_RATE_LIMIT_WINDOW" env-default:"1h"`
 }
 
 type Screenshot struct {
@@ -97,6 +103,14 @@ func Load() (Config, error) {
 
 	if cfg.Auth.TokenTTL <= 0 {
 		cfg.Auth.TokenTTL = defaultTokenTTL
+	}
+
+	if cfg.Auth.RateLimit.MaxFailedAttempts <= 0 {
+		cfg.Auth.RateLimit.MaxFailedAttempts = 5
+	}
+
+	if cfg.Auth.RateLimit.Window <= 0 {
+		cfg.Auth.RateLimit.Window = time.Hour
 	}
 
 	return cfg, nil

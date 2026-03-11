@@ -46,6 +46,46 @@ func TestAuthorization(t *testing.T) {
 	})
 }
 
+func TestAuthorizationRateLimit(t *testing.T) {
+	baseURL, stop := startApp(t, "x")
+	defer stop()
+
+	t.Run("sixth failed attempt is rate limited", func(t *testing.T) {
+		for range 5 {
+			statusCode, body := postAuth(t, baseURL, "wrong")
+			if statusCode != http.StatusUnauthorized {
+				t.Fatalf("expected first five failures to return %d, got %d, body: %s", http.StatusUnauthorized, statusCode, string(body))
+			}
+		}
+
+		statusCode, body := postAuth(t, baseURL, "wrong")
+		if statusCode != http.StatusTooManyRequests {
+			t.Fatalf("expected sixth failure to return %d, got %d, body: %s", http.StatusTooManyRequests, statusCode, string(body))
+		}
+
+		if !strings.Contains(string(body), "too many failed login attempts") {
+			t.Fatalf("expected rate limit response body, got: %s", string(body))
+		}
+	})
+}
+
+func TestAuthorizationSuccessNotCountedAgainstFailedLoginLimit(t *testing.T) {
+	baseURL, stop := startApp(t, "x")
+	defer stop()
+
+	for range 5 {
+		statusCode, body := postAuth(t, baseURL, "wrong")
+		if statusCode != http.StatusUnauthorized {
+			t.Fatalf("expected failed attempt to return %d, got %d, body: %s", http.StatusUnauthorized, statusCode, string(body))
+		}
+	}
+
+	statusCode, body := postAuth(t, baseURL, "x")
+	if statusCode != http.StatusOK {
+		t.Fatalf("expected correct key after five failures to return %d, got %d, body: %s", http.StatusOK, statusCode, string(body))
+	}
+}
+
 func startApp(t *testing.T, accessKey string) (string, func()) {
 	t.Helper()
 
