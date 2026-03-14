@@ -3,11 +3,12 @@ package ui
 import (
 	"image"
 	"image/color"
-	"net/url"
 	"strings"
 	"sync"
 	"time"
 	"unicode"
+
+	"crackoa/desktop/internal/ws"
 
 	"gioui.org/app"
 	"gioui.org/font"
@@ -117,14 +118,16 @@ func (u *UI) Run(window *app.Window, stealthStatus func() string) error {
 			// Handle button clicks.
 			if u.connectBtn.Clicked(gtx) {
 				code := strings.ToUpper(strings.TrimSpace(u.codeEditor.Text()))
-				host := strings.TrimSpace(u.hostEditor.Text())
+				host, err := ws.NormalizeServerURL(u.hostEditor.Text())
 				if len(code) == 4 && isAlphaNum(code) {
-					if !isValidWebSocketHost(host) {
+					if err != nil {
 						u.mu.Lock()
-						u.errMsg = "Enter a valid host, e.g. ws://localhost"
+						u.errMsg = "Enter a valid host, e.g. 172.16.3.88 or ws://localhost"
 						u.mu.Unlock()
 						continue
 					}
+
+					u.hostEditor.SetText(host)
 
 					u.mu.Lock()
 					u.errMsg = ""
@@ -343,17 +346,6 @@ func isAlphaNum(s string) bool {
 		}
 	}
 	return true
-}
-
-func isValidWebSocketHost(raw string) bool {
-	u, err := url.Parse(raw)
-	if err != nil {
-		return false
-	}
-	if u.Scheme != "ws" && u.Scheme != "wss" {
-		return false
-	}
-	return u.Host != ""
 }
 
 func drawRoundedRect(gtx layout.Context, bg color.NRGBA, radius int, w layout.Widget) layout.Dimensions {
