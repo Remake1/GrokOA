@@ -47,4 +47,6 @@ docker compose down
 
 ## Deployment
 
+For local Compose deployment, see [deploy/compose/README.md](/Users/rostyk/Documents/Projects/crackoa/deploy/compose/README.md).
+
 For Docker Swarm deployment, see [deploy/swarm/README.md](/Users/rostyk/Documents/Projects/crackoa/deploy/swarm/README.md).

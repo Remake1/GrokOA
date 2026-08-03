@@ -1,0 +1,140 @@
+#!/usr/bin/env bash
+
+set -euo pipefail
+
+ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
+PROJECT_NAME="${PROJECT_NAME:-crackoa-compose}"
+IMAGE_TAG="${IMAGE_TAG:-compose-local}"
+IMAGE_PREFIX="${IMAGE_PREFIX:-crackoa}"
+API_IMAGE="${API_IMAGE:-${IMAGE_PREFIX}/api:${IMAGE_TAG}}"
+WEB_IMAGE="${WEB_IMAGE:-${IMAGE_PREFIX}/web:${IMAGE_TAG}}"
+API_ENV_FILE="${API_ENV_FILE:-${ROOT_DIR}/api/.env}"
+COMPOSE_FILE="${ROOT_DIR}/deploy/compose/compose.yml"
+SECRET_DIR="${SECRET_DIR:-${ROOT_DIR}/deploy/compose/.secrets}"
+PUBLISHED_PORT="${PUBLISHED_PORT:-80}"
+
+required_bins=(docker grep tr mkdir chmod)
+for bin in "${required_bins[@]}"; do
+    if ! command -v "${bin}" >/dev/null 2>&1; then
+        echo "missing required command: ${bin}" >&2
+        exit 1
+    fi
+done
+
+read_env_value() {
+    local key="$1"
+    local file="$2"
+    local line
+
+    line="$(grep -E "^[[:space:]]*${key}=" "${file}" | tail -n 1 || true)"
+    line="${line#*=}"
+    line="$(printf '%s' "${line}" | tr -d '\r')"
+
+    if [[ "${line}" == \"*\" && "${line}" == *\" ]]; then
+        line="${line:1:${#line}-2}"
+    elif [[ "${line}" == \'*\' && "${line}" == *\' ]]; then
+        line="${line:1:${#line}-2}"
+    fi
+
+    printf '%s' "${line}"
+}
+
+write_secret_file() {
+    local name="$1"
+    local value="$2"
+    local path="${SECRET_DIR}/${name}"
+
+    printf '%s' "${value}" >"${path}"
+    chmod 600 "${path}"
+}
+
+detect_lan_ip() {
+    local interface
+    local address
+    local candidate
+
+    if [[ -n "${LAN_IP:-}" ]]; then
+        printf '%s' "${LAN_IP}"
+        return 0
+    fi
+
+    if command -v ipconfig >/dev/null 2>&1; then
+        for interface in en0 en1; do
+            address="$(ipconfig getifaddr "${interface}" 2>/dev/null || true)"
+            if [[ -n "${address}" ]]; then
+                printf '%s' "${address}"
+                return 0
+            fi
+        done
+    fi
+
+    if command -v hostname >/dev/null 2>&1; then
+        for candidate in $(hostname -I 2>/dev/null || true); do
+            case "${candidate}" in
+                127.* | ::1 | *:*) ;;
+                *)
+                    printf '%s' "${candidate}"
+                    return 0
+                    ;;
+            esac
+        done
+    fi
+}
+
+if [[ ! "${PUBLISHED_PORT}" =~ ^[0-9]+$ ]] ||
+    ((PUBLISHED_PORT < 1 || PUBLISHED_PORT > 65535)); then
+    echo "PUBLISHED_PORT must be an integer between 1 and 65535" >&2
+    exit 1
+fi
+
+if [[ ! -f "${API_ENV_FILE}" ]]; then
+    echo "missing API env file: ${API_ENV_FILE}" >&2
+    echo "create it from api/.env.example before deploying" >&2
+    exit 1
+fi
+
+access_key="$(read_env_value ACCESS_KEY "${API_ENV_FILE}")"
+jwt_secret="$(read_env_value JWT_SECRET "${API_ENV_FILE}")"
+openai_api_key="$(read_env_value OPENAI_API_KEY "${API_ENV_FILE}")"
+gemini_api_key="$(read_env_value GEMINI_API_KEY "${API_ENV_FILE}")"
+
+if [[ -z "${access_key}" ]]; then
+    echo "ACCESS_KEY must be set in ${API_ENV_FILE}" >&2
+    exit 1
+fi
+
+if [[ -z "${jwt_secret}" ]]; then
+    echo "JWT_SECRET must be set in ${API_ENV_FILE}" >&2
+    exit 1
+fi
+
+mkdir -p "${SECRET_DIR}"
+chmod 700 "${SECRET_DIR}"
+
+write_secret_file crackoa_access_key "${access_key}"
+write_secret_file crackoa_jwt_secret "${jwt_secret}"
+write_secret_file crackoa_openai_api_key "${openai_api_key}"
+write_secret_file crackoa_gemini_api_key "${gemini_api_key}"
+
+export API_IMAGE WEB_IMAGE PUBLISHED_PORT SECRET_DIR
+docker compose --project-name "${PROJECT_NAME}" --file "${COMPOSE_FILE}" up --build -d --remove-orphans
+
+echo "compose project ${PROJECT_NAME} deployed"
+echo "images:"
+echo "  api: ${API_IMAGE}"
+echo "  web: ${WEB_IMAGE}"
+echo "services:"
+docker compose --project-name "${PROJECT_NAME}" --file "${COMPOSE_FILE}" ps
+
+lan_ip="$(detect_lan_ip)"
+if [[ "${PUBLISHED_PORT}" == "80" ]]; then
+    echo "local URL: http://127.0.0.1/"
+    if [[ -n "${lan_ip}" ]]; then
+        echo "LAN URL:   http://${lan_ip}/"
+    fi
+else
+    echo "local URL: http://127.0.0.1:${PUBLISHED_PORT}/"
+    if [[ -n "${lan_ip}" ]]; then
+        echo "LAN URL:   http://${lan_ip}:${PUBLISHED_PORT}/"
+    fi
+fi

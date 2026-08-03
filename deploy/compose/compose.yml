@@ -1,0 +1,66 @@
+services:
+  nginx:
+    image: nginx:1.27-alpine
+    depends_on:
+      web:
+        condition: service_started
+      api:
+        condition: service_started
+    ports:
+      - target: 80
+        published: ${PUBLISHED_PORT:-80}
+        protocol: tcp
+    volumes:
+      - ../swarm/nginx.conf:/etc/nginx/conf.d/default.conf:ro
+    networks:
+      - crackoa
+    restart: on-failure
+
+  web:
+    image: ${WEB_IMAGE:-crackoa/web:compose-local}
+    build:
+      context: ../../web
+      dockerfile: Dockerfile
+    networks:
+      - crackoa
+    restart: on-failure
+
+  api:
+    image: ${API_IMAGE:-crackoa/api:compose-local}
+    build:
+      context: ../../api
+      dockerfile: Dockerfile
+    environment:
+      CONFIG_PATH: /app/config.yaml
+      ACCESS_KEY_FILE: /run/secrets/crackoa_access_key
+      JWT_SECRET_FILE: /run/secrets/crackoa_jwt_secret
+      OPENAI_API_KEY_FILE: /run/secrets/crackoa_openai_api_key
+      GEMINI_API_KEY_FILE: /run/secrets/crackoa_gemini_api_key
+    networks:
+      - crackoa
+    volumes:
+      - screenshots:/app/screenshots
+    secrets:
+      - crackoa_access_key
+      - crackoa_jwt_secret
+      - crackoa_openai_api_key
+      - crackoa_gemini_api_key
+    restart: on-failure
+
+secrets:
+  crackoa_access_key:
+    file: ${SECRET_DIR:-./.secrets}/crackoa_access_key
+  crackoa_jwt_secret:
+    file: ${SECRET_DIR:-./.secrets}/crackoa_jwt_secret
+  crackoa_openai_api_key:
+    file: ${SECRET_DIR:-./.secrets}/crackoa_openai_api_key
+  crackoa_gemini_api_key:
+    file: ${SECRET_DIR:-./.secrets}/crackoa_gemini_api_key
+
+networks:
+  crackoa:
+    name: ${COMPOSE_NETWORK:-crackoa_compose}
+    driver: bridge
+
+volumes:
+  screenshots:
