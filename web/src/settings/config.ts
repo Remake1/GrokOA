@@ -15,17 +15,20 @@ export const LANGUAGE_OPTIONS = [
 ] as const;
 
 export const AI_MODEL_OPTIONS = [
-  "gpt-5.3-codex",
-  "gpt-5.4-2026-03-05",
-  "gpt-5.1-codex-mini",
-  "gpt-5-mini-2025-08-07",
-  "gemini-3-flash-preview",
-  "gemini-3.1-pro-preview",
-  "gemini-3.1-flash-lite-preview",
+  { value: "gpt-5.4", label: "gpt-5.4" },
+  { value: "gpt-5.4-mini", label: "gpt-5.4-mini" },
+  { value: "gpt-5.6-sol", label: "gpt-5.6-sol (medium)" },
+  { value: "gpt-5.6-terra", label: "gpt-5.6-terra (medium)" },
+  { value: "gemini-3-flash-preview", label: "gemini-3-flash-preview" },
+  { value: "gemini-3.1-pro-preview", label: "gemini-3.1-pro-preview" },
+  {
+    value: "gemini-3.1-flash-lite-preview",
+    label: "gemini-3.1-flash-lite-preview",
+  },
 ] as const;
 
 export type CodingLanguage = (typeof LANGUAGE_OPTIONS)[number];
-export type AiModel = (typeof AI_MODEL_OPTIONS)[number];
+export type AiModel = (typeof AI_MODEL_OPTIONS)[number]["value"];
 
 export const DEFAULT_LANGUAGE: CodingLanguage = "C++ 20";
 export const DEFAULT_AI_MODEL: AiModel = "gemini-3.1-flash-lite-preview";

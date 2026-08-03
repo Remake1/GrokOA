@@ -9,7 +9,7 @@ import {
 } from "@/components/ui/select";
 
 defineProps<{
-    options: readonly string[];
+    options: readonly { value: string; label: string }[];
 }>();
 
 const model = defineModel<string>({ required: true });
@@ -25,10 +25,10 @@ const model = defineModel<string>({ required: true });
             <SelectContent>
                 <SelectItem
                     v-for="option in options"
-                    :key="option"
-                    :value="option"
+                    :key="option.value"
+                    :value="option.value"
                 >
-                    {{ option }}
+                    {{ option.label }}
                 </SelectItem>
             </SelectContent>
         </Select>

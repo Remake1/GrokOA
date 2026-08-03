@@ -11,6 +11,7 @@ WEB_IMAGE="${WEB_IMAGE:-${IMAGE_PREFIX}/web:${IMAGE_TAG}}"
 API_ENV_FILE="${API_ENV_FILE:-${ROOT_DIR}/api/.env}"
 STACK_FILE="${ROOT_DIR}/deploy/swarm/stack.yml"
 PUSH_IMAGES="${PUSH_IMAGES:-0}"
+PUBLISHED_PORT="${PUBLISHED_PORT:-80}"
 
 required_bins=(docker grep cut tr)
 for bin in "${required_bins[@]}"; do
@@ -69,6 +70,45 @@ wait_for_stack_removal() {
     exit 1
 }
 
+detect_lan_ip() {
+    local interface
+    local address
+    local candidate
+
+    if [[ -n "${LAN_IP:-}" ]]; then
+        printf '%s' "${LAN_IP}"
+        return 0
+    fi
+
+    if command -v ipconfig >/dev/null 2>&1; then
+        for interface in en0 en1; do
+            address="$(ipconfig getifaddr "${interface}" 2>/dev/null || true)"
+            if [[ -n "${address}" ]]; then
+                printf '%s' "${address}"
+                return 0
+            fi
+        done
+    fi
+
+    if command -v hostname >/dev/null 2>&1; then
+        for candidate in $(hostname -I 2>/dev/null || true); do
+            case "${candidate}" in
+                127.* | ::1 | *:*) ;;
+                *)
+                    printf '%s' "${candidate}"
+                    return 0
+                    ;;
+            esac
+        done
+    fi
+}
+
+if [[ ! "${PUBLISHED_PORT}" =~ ^[0-9]+$ ]] ||
+    ((PUBLISHED_PORT < 1 || PUBLISHED_PORT > 65535)); then
+    echo "PUBLISHED_PORT must be an integer between 1 and 65535" >&2
+    exit 1
+fi
+
 if [[ ! -f "${API_ENV_FILE}" ]]; then
     echo "missing API env file: ${API_ENV_FILE}" >&2
     echo "create it from api/.env.example before deploying" >&2
@@ -113,7 +153,7 @@ ensure_secret crackoa_jwt_secret "${jwt_secret}"
 ensure_secret crackoa_openai_api_key "${openai_api_key}"
 ensure_secret crackoa_gemini_api_key "${gemini_api_key}"
 
-export API_IMAGE WEB_IMAGE
+export API_IMAGE WEB_IMAGE PUBLISHED_PORT
 docker stack deploy --compose-file "${STACK_FILE}" "${STACK_NAME}" >/dev/null
 
 echo "stack ${STACK_NAME} deployed"
@@ -122,3 +162,16 @@ echo "  api: ${API_IMAGE}"
 echo "  web: ${WEB_IMAGE}"
 echo "services:"
 docker stack services "${STACK_NAME}"
+
+lan_ip="$(detect_lan_ip)"
+if [[ "${PUBLISHED_PORT}" == "80" ]]; then
+    echo "local URL: http://127.0.0.1/"
+    if [[ -n "${lan_ip}" ]]; then
+        echo "LAN URL:   http://${lan_ip}/"
+    fi
+else
+    echo "local URL: http://127.0.0.1:${PUBLISHED_PORT}/"
+    if [[ -n "${lan_ip}" ]]; then
+        echo "LAN URL:   http://${lan_ip}:${PUBLISHED_PORT}/"
+    fi
+fi

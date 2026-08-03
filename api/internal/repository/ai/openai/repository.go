@@ -75,14 +75,20 @@ func (r *Repository) StreamChat(
 		})
 	}
 
-	stream := r.client.Responses.NewStreaming(ctx, responses.ResponseNewParams{
+	params := responses.ResponseNewParams{
 		Model: openai.ResponsesModel(strings.TrimSpace(request.Model)),
 		Input: responses.ResponseNewParamsInputUnion{
 			OfInputItemList: responses.ResponseInputParam{
 				responses.ResponseInputItemParamOfMessage(inputContent, responses.EasyInputMessageRoleUser),
 			},
 		},
-	})
+	}
+
+	if reasoningEffort := reasoningEffortForModel(request.Model); reasoningEffort != "" {
+		params.Reasoning = openai.ReasoningParam{Effort: reasoningEffort}
+	}
+
+	stream := r.client.Responses.NewStreaming(ctx, params)
 	defer stream.Close()
 
 	for stream.Next() {
@@ -106,6 +112,15 @@ func (r *Repository) StreamChat(
 	}
 
 	return nil
+}
+
+func reasoningEffortForModel(model string) openai.ReasoningEffort {
+	switch strings.ToLower(strings.TrimSpace(model)) {
+	case "gpt-5.6-sol", "gpt-5.6-terra":
+		return openai.ReasoningEffortMedium
+	default:
+		return ""
+	}
 }
 
 func imageFileToDataURL(path string) (string, error) {

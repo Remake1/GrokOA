@@ -28,6 +28,39 @@ The script will:
 
 For a single-node swarm, the default local image tags are enough.
 
+After deployment, the script prints both the local URL and the LAN URL. Open the
+LAN URL on a phone connected to the same network. For example:
+
+```text
+LAN URL:   http://192.168.0.110/
+```
+
+Use `http://`, not `localhost`: on a phone, `localhost` refers to the phone.
+
+To publish a different host port:
+
+```bash
+PUBLISHED_PORT=8080 ./deploy/swarm/deploy.sh
+```
+
+## Checking the published port
+
+Swarm publishes ports through its ingress routing mesh. The individual task
+container may therefore show only `80/tcp` in `docker ps`; that does not mean the
+host port is missing. Check the service instead:
+
+```bash
+docker stack services crackoa
+docker service inspect crackoa_nginx --format '{{json .Endpoint.Ports}}'
+```
+
+The expected stack output includes `*:80->80/tcp` (or the port selected with
+`PUBLISHED_PORT`).
+
+If the LAN URL works on the host but not on another device, make sure both
+devices are on the same non-guest Wi-Fi network and that client/AP isolation,
+a VPN, or the host firewall is not blocking local traffic.
+
 ## Secrets
 
 The API reads these values from Docker secrets through `*_FILE` environment variables:

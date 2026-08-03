@@ -27,10 +27,10 @@ room:
 ai:
   openai:
     models:
-      - "gpt-5.3-codex"
-      - "gpt-5.4-2026-03-05"
-      - "gpt-5.1-codex-mini"
-      - "gpt-5-mini-2025-08-07"
+      - "gpt-5.4"
+      - "gpt-5.4-mini"
+      - "gpt-5.6-sol"
+      - "gpt-5.6-terra"
   gemini:
     models:
       - "gemini-3-flash-preview"
