@@ -91,19 +91,19 @@ func (r *Repository) StreamChat(
 	stream := r.client.Responses.NewStreaming(ctx, params)
 	defer stream.Close()
 
+	receivedOutput := false
 	for stream.Next() {
 		event := stream.Current()
-		if event.Type != "response.output_text.delta" {
-			continue
+		completed, outputReceived, err := handleStreamEvent(event, receivedOutput, onChunk)
+		if err != nil {
+			return err
 		}
+		receivedOutput = receivedOutput || outputReceived
 
-		delta := event.AsResponseOutputTextDelta().Delta
-		if delta == "" {
-			continue
-		}
-
-		if err := onChunk(delta); err != nil {
-			return fmt.Errorf("handle streamed delta: %w", err)
+		// response.completed is the terminal lifecycle event. Do not wait for the
+		// underlying SSE connection to close, since a proxy may keep it alive.
+		if completed {
+			return nil
 		}
 	}
 
@@ -111,7 +111,65 @@ func (r *Repository) StreamChat(
 		return fmt.Errorf("stream openai response: %w", err)
 	}
 
-	return nil
+	return errors.New("openai response stream ended before a terminal event")
+}
+
+func handleStreamEvent(
+	event responses.ResponseStreamEventUnion,
+	receivedOutput bool,
+	onChunk aiservice.StreamChunkHandler,
+) (completed bool, outputReceived bool, err error) {
+	switch event.Type {
+	case "response.output_text.delta", "response.refusal.delta":
+		if event.Delta == "" {
+			return false, false, nil
+		}
+
+		if err := onChunk(event.Delta); err != nil {
+			return false, false, fmt.Errorf("handle streamed delta: %w", err)
+		}
+
+		return false, true, nil
+
+	case "response.completed":
+		// The completed response is a safe fallback if the API or an intermediary
+		// delivered the terminal event but no text delta events.
+		if !receivedOutput {
+			if output := event.Response.OutputText(); output != "" {
+				if err := onChunk(output); err != nil {
+					return false, false, fmt.Errorf("handle completed response: %w", err)
+				}
+			}
+		}
+
+		return true, false, nil
+
+	case "error":
+		message := strings.TrimSpace(event.Message)
+		if message == "" {
+			message = "unknown streaming error"
+		}
+
+		return false, false, fmt.Errorf("openai stream error: %s", message)
+
+	case "response.failed":
+		message := strings.TrimSpace(event.Response.Error.Message)
+		if message == "" {
+			message = "response generation failed"
+		}
+
+		return false, false, fmt.Errorf("openai response failed: %s", message)
+
+	case "response.incomplete":
+		reason := strings.TrimSpace(event.Response.IncompleteDetails.Reason)
+		if reason == "" {
+			reason = "unknown reason"
+		}
+
+		return false, false, fmt.Errorf("openai response incomplete: %s", reason)
+	}
+
+	return false, false, nil
 }
 
 func reasoningEffortForModel(model string) openai.ReasoningEffort {

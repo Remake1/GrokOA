@@ -132,7 +132,14 @@ export function useRoomSocket() {
 
         socket.onclose = () => {
             store.setServerConnected(false);
-            ws = null;
+            if (store.aiRequestStatus === "streaming") {
+                store.failAiResponseStream();
+                error.value = "Connection lost while receiving the AI response";
+            }
+
+            if (ws === socket) {
+                ws = null;
+            }
 
             if (!manualDisconnect) {
                 scheduleReconnect();
